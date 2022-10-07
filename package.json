@@ -10,8 +10,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^1.8.5",
     "react": "18.1.0",
-    "react-native": "0.70.2"
+    "react-native": "0.70.2",
+    "react-native-video": "^6.0.0-alpha.3",
+    "react-native-webrtc": "^106.0.0-beta.3",
+    "react-redux": "^8.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",
