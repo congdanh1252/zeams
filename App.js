@@ -2,17 +2,18 @@ import React from 'react'
 import { SafeAreaView, StatusBar } from 'react-native'
 
 import BottomTabs from './src/navigation/BottomTabs'
+import MainStack from './src/navigation/MainStack'
 
 const App = () => {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar
         translucent
-        barStyle={'dark-content'}
-        backgroundColor={'transparent'}
+        barStyle={'light-content'}
+        backgroundColor={'black'}
       />
       
-      <BottomTabs />
+      <MainStack />
     </SafeAreaView>
   )
 }
