@@ -5,6 +5,7 @@ import { View, Text } from 'react-native'
 
 import COLOR from '../theme'
 import BottomTabs from './BottomTabs'
+import { MainScreen } from '../screens/Meeting'
 
 const Stack = createNativeStackNavigator()
 
@@ -25,7 +26,7 @@ const MainStack = () => {
         }}
       >
         <Stack.Screen name="HomeStack" component={BottomTabs} options={{headerShown: false}}/>
-        <Stack.Screen name="MyScreen" component={MyScreen} options={{headerShown: false, orientation: 'portrait'}}/>
+        <Stack.Screen name="MyScreen" component={MainScreen} options={{headerShown: false, orientation: 'portrait'}}/>
       </Stack.Navigator>
     </NavigationContainer>
   )

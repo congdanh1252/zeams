@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "259227031088",
+    "project_id": "zeams-69c66",
+    "storage_bucket": "zeams-69c66.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:259227031088:android:e7d39b1efaa7e0a6827ff5",
+        "android_client_info": {
+          "package_name": "com.zeams"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "259227031088-du9ovu6fal8430j60o9670m5evr1rb87.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCn8OkYhhw5hYWtNaENPX53RPbvvu1bp04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "259227031088-du9ovu6fal8430j60o9670m5evr1rb87.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
