@@ -1,22 +1,23 @@
-import React from 'react';
-import {Text, View} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import {NavigationContainer} from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import React from 'react'
+import {Text, View} from 'react-native'
+import Ionicons from 'react-native-vector-icons/Ionicons'
+import {NavigationContainer} from '@react-navigation/native'
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs'
 
-import COLOR from '../theme';
-import CallScreen from '../screens/Call';
-import {SchedulesScreen} from '../screens/Schedule';
+import COLOR from '../theme'
+import CallStack from './CallStack'
+import CallScreen from '../screens/Call'
+import {SchedulesScreen} from '../screens/Schedule'
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator()
 
 const SettingScreen = () => {
   return (
     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
       <Text>Settings!</Text>
     </View>
-  );
-};
+  )
+}
 
 const BottomTabs = () => {
   return (
@@ -24,14 +25,14 @@ const BottomTabs = () => {
       <Tab.Navigator
         screenOptions={({route}) => ({
           tabBarIcon: ({focused, color, size}) => {
-            let iconName;
+            let iconName
 
             if (route.name === 'Home') {
-              iconName = 'home-outline';
+              iconName = 'home-outline'
             } else if (route.name === 'Settings') {
-              iconName = 'cog-outline';
+              iconName = 'cog-outline'
             } else if (route.name === 'Schedules') {
-              iconName = 'calendar-outline';
+              iconName = 'calendar-outline'
             }
 
             return (
@@ -40,7 +41,7 @@ const BottomTabs = () => {
                 size={22}
                 color={focused ? COLOR.white : '#444444'}
               />
-            );
+            )
           },
           tabBarStyle: {
             elevation: 0,
@@ -53,7 +54,7 @@ const BottomTabs = () => {
         })}>
         <Tab.Screen
           name="Home"
-          component={CallScreen}
+          component={CallStack}
           options={{headerShown: false}}
         />
         <Tab.Screen
@@ -68,7 +69,7 @@ const BottomTabs = () => {
         />
       </Tab.Navigator>
     </NavigationContainer>
-  );
-};
+  )
+}
 
-export default BottomTabs;
+export default BottomTabs

@@ -1,32 +1,45 @@
 import React, {useState} from 'react'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native'
-import {Event} from '../../components/Event'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  TextInput,
+} from 'react-native'
+
 import COLOR from '../../theme'
 
-export const SchedulesScreen = () => {
+const EnterCode = ({route, navigation}) => {
   return (
     <View style={styles.container}>
-      <View
-        style={{
-          alignItems: 'center',
-          width: '98%',
-          marginBottom: 16,
-        }}>
-        <Text style={{marginBottom: 4}}>19-09-2021 | Sunday</Text>
-
-        <View
-          style={{
-            width: '95%',
-          }}>
-          <Event />
-          <Event />
-          <Event />
-        </View>
+      <View style={styles.logo}>
+        <Image
+          style={styles.logo}
+          source={require('../../assets/images/Logo.png')}></Image>
       </View>
+
+      <Text style={styles.text}>
+        Enter the code provided by the meeting organiser
+      </Text>
+
+      <View style={styles.input}>
+        <TextInput placeholder="Enter code"></TextInput>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, styles.blackButton]}
+        onPress={() => {
+          navigation.navigate('JoinMeeting')
+        }}>
+        <Text style={styles.whiteText}>Join</Text>
+      </TouchableOpacity>
     </View>
   )
 }
+
+export default EnterCode
 
 const styles = StyleSheet.create({
   container: {
@@ -38,11 +51,22 @@ const styles = StyleSheet.create({
   fullWidth: {
     width: '100%',
   },
+  text: {
+    marginBottom: 8,
+  },
   logo: {
     alignItems: 'center',
     justifyContent: 'center',
     width: 300,
     height: 300,
+  },
+  input: {
+    display: 'flex',
+    alignItems: 'center',
+    width: '80%',
+    borderRadius: 5,
+    marginBottom: 20,
+    borderWidth: 2,
   },
   button: {
     display: 'flex',

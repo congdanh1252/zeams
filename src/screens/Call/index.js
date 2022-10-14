@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState} from 'react'
 import {
   ScreenCapturePickerView,
   RTCPeerConnection,
@@ -8,37 +8,37 @@ import {
   MediaStream,
   MediaStreamTrack,
   mediaDevices,
-} from 'react-native-webrtc';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+} from 'react-native-webrtc'
+import Ionicons from 'react-native-vector-icons/Ionicons'
+import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native'
 
-import COLOR from '../../theme';
+import COLOR from '../../theme'
 
-const CallScreen = () => {
-  const isVoiceOnly = false;
+const CallScreen = ({route, navigation}) => {
+  const isVoiceOnly = false
   const mediaConstraints = {
     audio: true,
     video: {
       frameRate: 60,
       facingMode: 'environment', // 'user'
     },
-  };
-  const [localMediaStream, setLocalMediaStream] = useState(undefined);
+  }
+  const [localMediaStream, setLocalMediaStream] = useState(undefined)
 
   const gettingVideoStream = () => {
     try {
       mediaDevices.getUserMedia(mediaConstraints).then(stream => {
-        setLocalMediaStream(stream);
+        setLocalMediaStream(stream)
 
         if (isVoiceOnly) {
-          let videoTrack = stream.getVideoTracks()[0];
-          videoTrack.enabled = false;
+          let videoTrack = stream.getVideoTracks()[0]
+          videoTrack.enabled = false
         }
-      });
+      })
     } catch (err) {
       // Handle Error
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -52,7 +52,11 @@ const CallScreen = () => {
         <Text style={styles.whiteText}>New Meeting</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.whiteButton]}>
+      <TouchableOpacity
+        style={[styles.button, styles.whiteButton]}
+        onPress={() => {
+          navigation.navigate('EnterCode')
+        }}>
         <Text style={styles.blackText}>Join a meeting</Text>
       </TouchableOpacity>
 
@@ -74,10 +78,10 @@ const CallScreen = () => {
         />
       ) : null} */}
     </View>
-  );
-};
+  )
+}
 
-export default CallScreen;
+export default CallScreen
 
 const styles = StyleSheet.create({
   container: {
@@ -123,4 +127,4 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 10,
   },
-});
+})

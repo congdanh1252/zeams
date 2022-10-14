@@ -1,8 +1,8 @@
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import React from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native'
+import Ionicons from 'react-native-vector-icons/Ionicons'
+import React from 'react'
 
-import COLOR from '../theme';
+import COLOR from '../theme'
 
 export const Event = () => {
   return (
@@ -24,8 +24,8 @@ export const Event = () => {
         ID: 6161545445845
       </Text>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -56,4 +56,4 @@ const styles = StyleSheet.create({
     right: 4,
     alignSelf: 'flex-end',
   },
-});
+})
