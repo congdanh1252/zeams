@@ -14,8 +14,8 @@ import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native'
 
 import COLOR from '../../theme'
 
-const CallScreen = () => {
-  const isVoiceOnly = false;
+const CallScreen = ({route, navigation}) => {
+  const isVoiceOnly = false
   const mediaConstraints = {
     audio: true,
     video: {
@@ -54,7 +54,11 @@ const CallScreen = () => {
         <Text style={styles.whiteText}>New meeting</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.whiteButton]}>
+      <TouchableOpacity
+        style={[styles.button, styles.whiteButton]}
+        onPress={() => {
+          navigation.navigate('EnterCode')
+        }}>
         <Text style={styles.blackText}>Join a meeting</Text>
       </TouchableOpacity>
 
@@ -79,7 +83,7 @@ const CallScreen = () => {
   )
 }
 
-export default CallScreen;
+export default CallScreen
 
 const styles = StyleSheet.create({
   container: {
