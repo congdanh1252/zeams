@@ -3,24 +3,28 @@ import { View, StyleSheet, Image } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 
 import COLOR from '../../theme'
+import { VISUAL_IMG } from '../../assets'
 import Button from '../../components/Button'
 
 const HomeScreen = () => {
   const navigation = useNavigation()
 
-  const navigateMeetingStack = () => {
-    navigation.navigate('MyScreen')
+  const navigateMeetingStack = (action) => {
+    navigation.navigate('MeetingStack', {
+      params: {
+        action: action
+      },
+      screen: action == 'join' ? 'EnterCode' : 'JoinMeeting'
+    })
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.logo}>
-        <Image
-          style={styles.logo}
-          resizeMode='contain'
-          source={require('../../assets/images/Logo.png')}
-        />
-      </View>
+      <Image
+        style={styles.logo}
+        resizeMode='contain'
+        source={VISUAL_IMG}
+      />
 
       <View style={styles.buttons}>
         <Button
@@ -28,7 +32,7 @@ const HomeScreen = () => {
           width={'80%'}
           hasBlackBg={true}
           title={'New meeting'}
-          onPress={navigateMeetingStack}
+          onPress={() => navigateMeetingStack('create')}
         />
 
         <Button
@@ -36,7 +40,7 @@ const HomeScreen = () => {
           width={'80%'}
           hasBlackBg={false}
           title={'Join a meeting'}
-          onPress={navigateMeetingStack}
+          onPress={() => navigateMeetingStack('join')}
         />
       </View>
     </View>
@@ -54,6 +58,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: '92%',
+    height: '48%',
     alignItems: 'center',
     justifyContent: 'center',
   },

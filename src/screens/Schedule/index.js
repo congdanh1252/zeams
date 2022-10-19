@@ -112,8 +112,8 @@ export const SchedulesScreen = () => {
       <FlatList
         data={DATA}
         horizontal={false}
-        renderItem={renderItem}
         style={styles.list}
+        renderItem={renderItem}
         keyExtractor={item => item.date}
         showsVerticalScrollIndicator={false}
       />

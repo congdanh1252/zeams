@@ -1,62 +1,75 @@
-import React, {useState, useEffect} from 'react'
+import React, { useState, useEffect } from 'react'
 import {
-  ScreenCapturePickerView,
-  RTCPeerConnection,
-  RTCIceCandidate,
-  RTCSessionDescription,
   RTCView,
-  MediaStream,
-  MediaStreamTrack,
   mediaDevices,
 } from 'react-native-webrtc'
-import Ionicons from 'react-native-vector-icons/Ionicons'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
-  TextInput,
 } from 'react-native'
+import Ionicons from 'react-native-vector-icons/Ionicons'
 
-import COLOR from '../../theme'
+import COLOR from '../../../theme'
 
-const JoinMeeting = () => {
+export const JoinMeeting = ({ navigation, route }) => {
+  const { action, code } = route?.params
   const isVoiceOnly = false
-  const [isMicEnable, setIsMicEnable] = useState(true)
-  const [isCamEnable, setIsCamEnable] = useState(true)
-
   const mediaConstraints = {
     audio: true,
     video: {
       frameRate: 60,
-      facingMode: 'environment', // 'user'
+      facingMode: 'user', // 'user'
     },
   }
+  const [isMicEnable, setIsMicEnable] = useState(true)
+  const [isCamEnable, setIsCamEnable] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
 
-  const gettingVideoStream = () => {
-    try {
-      mediaDevices.getUserMedia(mediaConstraints).then(stream => {
-        setLocalMediaStream(stream)
-
-        if (isVoiceOnly) {
-          let videoTrack = stream.getVideoTracks()[0]
-          videoTrack.enabled = false
-        }
+  const handleJoiningMeet = () => {
+    if (localMediaStream != undefined) {
+      localMediaStream
+      .getTracks()
+      .map(track => {
+        track.stop()
       })
-    } catch (err) {
-      // Handle Error
+      setLocalMediaStream(undefined)
+      console.log('Clean up local media stream in ready screen!')
     }
+
+    navigation.navigate(
+      'MeetingScreen', {
+        action: action,
+        code: code
+      }
+    )
   }
 
+  // get media stream
   useEffect(() => {
+    const gettingVideoStream = () => {
+      try {
+        mediaDevices.getUserMedia(mediaConstraints)
+        .then(stream => {
+          setLocalMediaStream(stream)
+  
+          if (isVoiceOnly) {
+            let videoTrack = stream.getVideoTracks()[0]
+            videoTrack.enabled = false
+          }
+        })
+      } catch (err) {
+        // Handle Error
+      }
+    }
+
     gettingVideoStream()
   }, [])
 
   return (
     <View style={styles.container}>
-      <Text>abc-defg-xyz</Text>
+      <Text style={styles.blackText}>abc-defg-xyz</Text>
       {localMediaStream != undefined ? (
         <RTCView
           zOrder={50}
@@ -79,7 +92,7 @@ const JoinMeeting = () => {
           style={styles.icon}
           onPress={() => setIsCamEnable(!isCamEnable)}>
           <Ionicons
-            name={'videocam-off-outline'}
+            name={'barcode-outline'}
             color={COLOR.primary}
             size={20}
           />
@@ -101,7 +114,10 @@ const JoinMeeting = () => {
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        <TouchableOpacity style={[styles.button, styles.blackButton]}>
+        <TouchableOpacity
+          onPress={handleJoiningMeet}
+          style={[styles.button, styles.blackButton]}
+        >
           <Ionicons
             style={{marginRight: 4}}
             size={20}
@@ -110,14 +126,12 @@ const JoinMeeting = () => {
           />
           <Text style={styles.whiteText}>Join</Text>
         </TouchableOpacity>
-        <Text>Joining as</Text>
-        <Text style={styles.userText}>tngcdng@gmail.com</Text>
+        <Text style={styles.blackText}>Joining as</Text>
+        <Text style={[styles.userText, styles.blackText]}>tngcdng@gmail.com</Text>
       </View>
     </View>
   )
 }
-
-export default JoinMeeting
 
 const styles = StyleSheet.create({
   container: {
@@ -158,11 +172,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   blackButton: {
-    backgroundColor: COLOR.primary,
-  },
-  whiteButton: {
-    backgroundColor: COLOR.white,
-    borderColor: COLOR.primary,
+    backgroundColor: COLOR.black,
   },
   blackText: {
     color: '#000',

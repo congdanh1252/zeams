@@ -45,7 +45,7 @@ const BottomStack = ({  }) => {
       />
 
       <SingleButton
-        name={'people-outline'}
+        name={'share-outline'}
         onPress={dummyFunction}
       />
 
@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: windowWidth * 0.135,
     height: windowWidth * 0.135,
+    borderRadius: (windowWidth * 0.135) / 2,
     backgroundColor: 'rgba(100, 100, 100, 0.3)',
-    borderRadius: (windowWidth * 0.135) / 2
   },
   exitButton: {
     backgroundColor: 'red'
