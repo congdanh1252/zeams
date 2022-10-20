@@ -2,7 +2,6 @@ import {
   RTCPeerConnection,
   RTCIceCandidate,
   RTCSessionDescription,
-  RTCView,
   MediaStream,
   mediaDevices,
 } from 'react-native-webrtc'
@@ -20,7 +19,7 @@ const servers = {
     {
       urls: [
         'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
+        // 'stun:stun2.l.google.com:19302',
       ],
     },
   ],
@@ -42,29 +41,34 @@ const sessionConstraints = {
 
 export const MainScreen = ({ navigation, route }) => {
   const { action, code } = route?.params
-  const peerConnection = useRef(new RTCPeerConnection(servers))
+  const [cachedLocalPC, setCachedLocalPC] = useState()
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
   const [remoteMediaStream, setRemoteMediaStream] = useState(undefined)
 
+  const switchCamera = () => {
+    localMediaStream.getVideoTracks().forEach(track => track._switchCamera())
+  }
+
   // handle WebRTC works
   useEffect(() => {
-    let channelSubscriber = undefined
-    let answerCansSubscriber = undefined
-    let offerCansSubscriber = undefined
-
-    const handleMediaStream = () => {
+    if (action == 'join') {
       try {
-        let remoteStream = new MediaStream()
-        mediaDevices.getUserMedia(mediaConstraints)
-        .then(stream => {
-          setLocalMediaStream(stream)
-          stream?.getTracks().forEach(track => {
-            peerConnection.current?.addTrack(track)
-          })
+        const peerConnection = new RTCPeerConnection(servers)
+        const channelDoc = firestore().collection('channels').doc(code)
+        const offerCandidates = channelDoc.collection('offerCandidates')
+        const answerCandidates = channelDoc.collection('answerCandidates')
+
+        peerConnection.addEventListener('icecandidate', event => {
+          if (!event.candidate) {
+            console.log('Got final candidate!')
+            return
+          }
+          answerCandidates.add(event.candidate.toJSON())
         })
 
         // Pull tracks from remote stream, add to video stream
-        peerConnection.current.addEventListener('track', event => {
+        peerConnection.addEventListener('track', event => {
+          let remoteStream = new MediaStream()
           console.log('In Track')
           if (event.streams[0] != undefined) {
             console.log('streams[0]')
@@ -77,23 +81,13 @@ export const MainScreen = ({ navigation, route }) => {
           }
           setRemoteMediaStream(remoteStream)
         })
-      } catch (error) {
 
-      }
-    }
-
-    handleMediaStream()
-
-    if (action == 'join') {
-      try {
-        const channelDoc = firestore().collection('channels').doc(code)
-        const offerCandidates = channelDoc.collection('offerCandidates')
-        const answerCandidates = channelDoc.collection('answerCandidates')
-
-        peerConnection.current.addEventListener('icecandidate', async event => {
-          if (event.candidate) {
-            await answerCandidates.add(event.candidate.toJSON())
-          }
+        mediaDevices.getUserMedia(mediaConstraints)
+        .then(stream => {
+          setLocalMediaStream(stream)
+          stream?.getTracks().forEach(track => {
+            peerConnection?.addTrack(track)
+          })
         })
 
         channelDoc
@@ -101,67 +95,80 @@ export const MainScreen = ({ navigation, route }) => {
         .then(channelDocument => {
           const offerDescription = channelDocument?.data()?.offer
 
-          peerConnection.current
-          .setRemoteDescription(new RTCSessionDescription(offerDescription))
-          .then(() => {
+          peerConnection.setRemoteDescription(new RTCSessionDescription(offerDescription))
 
-            peerConnection.current
-            .createAnswer(sessionConstraints)
-            .then(answerDescription => {
+          peerConnection
+          .createAnswer(sessionConstraints)
+          .then(answerDescription => {
+            peerConnection.setLocalDescription(answerDescription)
 
-              peerConnection.current
-              .setLocalDescription(answerDescription)
-              .then(() => {
-                const offer = offerDescription
-                const answer = {
-                  type: answerDescription.type,
-                  sdp: answerDescription.sdp,
-                }
-        
-                channelDoc.set({ answer, offer })
-    
-                offerCandidates
-                .get()
-                .then(querySnapshot => {
-                  querySnapshot.forEach((documentSnapshot) => {
-                    peerConnection.current.addIceCandidate(new RTCIceCandidate(documentSnapshot.data()))
-                  })
-                })
-              })
-            })
+            const answer = {
+              type: answerDescription.type,
+              sdp: answerDescription.sdp,
+            }
+      
+            channelDoc.update({ answer })
+          })
+        })
 
-            // CHECK THIS
-            if (offerCansSubscriber == undefined) {
-              offerCansSubscriber = offerCandidates.onSnapshot(snapshot => {
-                snapshot.docChanges().forEach(change => {
-                  if (change.type === 'added') {
-                    const data = change.doc.data()
-                    peerConnection.current.addIceCandidate(new RTCIceCandidate(data))
-                  }
-                })
-              })
+        offerCandidates.onSnapshot(snapshot => {
+          snapshot.docChanges().forEach(async change => {
+            if (change.type === 'added') {
+              const data = change.doc.data()
+              await peerConnection.addIceCandidate(new RTCIceCandidate(data))
             }
           })
         })
+
+        setCachedLocalPC(peerConnection)
       } catch (err) {
         // Handle Error
       }
-    } else if (action == 'create') {
+    }
+    if (action == 'create') {
+      // qU1wKfqxKkfGAKDPdWGQ
+      const peerConnection = new RTCPeerConnection(servers)
       const channelDoc = firestore().collection('channels').doc()
       const offerCandidates = channelDoc.collection('offerCandidates')
       const answerCandidates = channelDoc.collection('answerCandidates')
 
-      peerConnection.current.addEventListener('icecandidate', async event => {
-        if (event.candidate) {
-          await offerCandidates.add(event.candidate.toJSON())
+      mediaDevices.getUserMedia(mediaConstraints)
+      .then(stream => {
+        setLocalMediaStream(stream)
+        stream?.getTracks().forEach(track => {
+          peerConnection?.addTrack(track)
+        })
+      })
+
+      peerConnection.addEventListener('icecandidate', event => {
+        if (!event.candidate) {
+          console.log('Got final candidate!')
+          return
         }
+        offerCandidates.add(event.candidate.toJSON())
+      })
+
+      // Pull tracks from remote stream, add to video stream
+      peerConnection.addEventListener('track', event => {
+        let remoteStream = new MediaStream()
+        console.log('In Track')
+        if (event.streams[0] != undefined) {
+          console.log('streams[0]')
+          event.streams[0].getTracks().forEach(track => {
+            remoteStream.addTrack(track)
+          })
+        } else {
+          console.log('event.track')
+          remoteStream = new MediaStream([event.track])
+        }
+        setRemoteMediaStream(remoteStream)
       })
 
       //create offer
-      peerConnection.current
+      peerConnection
       .createOffer(sessionConstraints)
       .then(offerDescription => {
-        peerConnection.current.setLocalDescription(offerDescription)
+        peerConnection.setLocalDescription(offerDescription)
 
         const offer = {
           sdp: offerDescription.sdp,
@@ -169,32 +176,28 @@ export const MainScreen = ({ navigation, route }) => {
         }
   
         channelDoc.set({ offer })
+      })
 
-        // Listen for remote answer
-        if (channelSubscriber == undefined) {
-          channelSubscriber =
-            channelDoc.onSnapshot(snapshot => {
-              const data = snapshot.data()
-              if (!peerConnection.current.remoteDescription && data?.answer) {
-                const answerDescription = new RTCSessionDescription(data.answer)
-                peerConnection.current.setRemoteDescription(answerDescription)
-
-                // When answered, add candidate to peer connection
-                if (answerCansSubscriber == undefined) {
-                  answerCansSubscriber =
-                    answerCandidates.onSnapshot(snapshot => {
-                      snapshot.docChanges().forEach(change => {
-                        if (change.type === 'added') {
-                          const data = change.doc.data()
-                          peerConnection.current.addIceCandidate(new RTCIceCandidate(data))
-                        }
-                      })
-                    })
-                }
-              }
-            })
+      channelDoc.onSnapshot(snapshot => {
+        const data = snapshot.data()
+        if (!peerConnection.remoteDescription && data?.answer
+            || peerConnection.remoteDescription != data?.answer) {
+          const answerDescription = new RTCSessionDescription(data.answer)
+          peerConnection.setRemoteDescription(answerDescription)
         }
       })
+
+      // When answered, add candidate to peer connection
+      answerCandidates.onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(async change => {
+          if (change.type === 'added') {
+            const data = change.doc.data()
+            peerConnection.addIceCandidate(new RTCIceCandidate(data))
+          }
+        })
+      })
+
+      setCachedLocalPC(peerConnection)
     }
 
     return () => {
@@ -205,11 +208,13 @@ export const MainScreen = ({ navigation, route }) => {
           track.stop()
         })
       }
-      peerConnection.current?.close()
-      peerConnection.current = undefined
-      channelSubscriber != undefined ? channelSubscriber() : null
-      offerCansSubscriber != undefined ? offerCansSubscriber() : null
-      answerCansSubscriber != undefined ? answerCansSubscriber() : null 
+
+      if (cachedLocalPC) {
+        cachedLocalPC.close()
+        setCachedLocalPC(undefined)
+        setLocalMediaStream(undefined)
+        setRemoteMediaStream(undefined)
+      }
     }
   }, [])
 
@@ -220,7 +225,7 @@ export const MainScreen = ({ navigation, route }) => {
         remoteStream={remoteMediaStream}
       />
 
-      <BottomStack />
+      <BottomStack switchCamera={switchCamera}/>
     </View>
   )
 }

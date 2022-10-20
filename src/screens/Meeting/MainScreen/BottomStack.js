@@ -22,7 +22,7 @@ const SingleButton = ({ name, onPress, isExitButton = false }) => {
   )
 }
 
-const BottomStack = ({  }) => {
+const BottomStack = ({ switchCamera }) => {
   const dummyFunction = () => {
 
   }
@@ -30,8 +30,8 @@ const BottomStack = ({  }) => {
   return (
     <View style={styles.container}>
       <SingleButton
-        name={'videocam-outline'}
-        onPress={dummyFunction}
+        name={'camera-reverse-outline'}
+        onPress={switchCamera}
       />
 
       <SingleButton
