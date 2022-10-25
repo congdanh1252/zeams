@@ -5,6 +5,7 @@ import {
   MediaStream,
   mediaDevices,
 } from 'react-native-webrtc'
+import io from 'socket.io-client'
 import { StyleSheet, View } from "react-native"
 import firestore from '@react-native-firebase/firestore'
 import React, { useEffect, useRef, useState } from "react"
@@ -12,14 +13,14 @@ import React, { useEffect, useRef, useState } from "react"
 import COLOR from "../../../theme"
 import BottomStack from "./BottomStack"
 import MainSection from "./MainSection"
-import { statusBarHeight, windowWidth } from "../../../constants"
+import { SERVER_URL, statusBarHeight, windowWidth } from "../../../constants"
 
 const servers = {
   iceServers: [
     {
       urls: [
         'stun:stun1.l.google.com:19302',
-        // 'stun:stun2.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
       ],
     },
   ],
@@ -40,8 +41,9 @@ const sessionConstraints = {
 }
 
 export const MainScreen = ({ navigation, route }) => {
-  const { action, code } = route?.params
-  const [cachedLocalPC, setCachedLocalPC] = useState()
+  // const { action, code } = 'create'//route?.params 
+  const connection = io(SERVER_URL, {transports: ['websocket']})
+  const peerConnection = useRef(null)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
   const [remoteMediaStream, setRemoteMediaStream] = useState(undefined)
 
@@ -49,26 +51,105 @@ export const MainScreen = ({ navigation, route }) => {
     localMediaStream.getVideoTracks().forEach(track => track._switchCamera())
   }
 
-  // handle WebRTC works
-  useEffect(() => {
-    if (action == 'join') {
-      try {
-        const peerConnection = new RTCPeerConnection(servers)
-        const channelDoc = firestore().collection('channels').doc(code)
-        const offerCandidates = channelDoc.collection('offerCandidates')
-        const answerCandidates = channelDoc.collection('answerCandidates')
+  const sendToServer = (msg) => {
+    connection.emit('message', JSON.stringify(msg))
+  }
 
-        peerConnection.addEventListener('icecandidate', event => {
-          if (!event.candidate) {
-            console.log('Got final candidate!')
-            return
+  const connectServer = () => {
+    connection.on('connect', () => {
+      console.log('IO connected')
+    })
+
+    connection.on('message', async (msg) => {
+      const obj = JSON.parse(msg)
+      switch(obj?.type) {
+        case 'id':
+          break
+        case 'message':
+          console.log(msg)
+          break
+        case 'offer':
+          try {
+            if (!peerConnection.current || peerConnection.current == null) {
+              console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+              start()
+            }
+
+            if (obj.data != peerConnection.current?.localDescription) {
+              console.log('Set offer as remote description')
+              if (peerConnection.current.signalingState != 'stable') {
+                await Promise.all([
+                  peerConnection.current.setLocalDescription({type: "rollback"}),
+                  peerConnection.current.setRemoteDescription(obj?.data)
+                ])
+              } else {
+                peerConnection.current.setRemoteDescription(obj?.data)
+              }
+            }
+
+            peerConnection.current.createAnswer(sessionConstraints)
+            .then(answerDescription => {
+              peerConnection.current.setLocalDescription(answerDescription)
+
+              sendToServer({
+                type: "answer",
+                data: answerDescription
+              })
+            })
+
+            console.log('Received message: offer')
+          } catch (e) {
+
           }
-          answerCandidates.add(event.candidate.toJSON())
-        })
+          break
+        case 'answer':
+          peerConnection.current.setRemoteDescription(obj.data)
+          console.log('Received message: answer')
+          break
+        case 'ice-candidate':
+          try {
+            peerConnection.current.addIceCandidate(new RTCIceCandidate(obj.data))
+            console.log('Received message: ice-candidate')
+          } catch(err) {
+            
+          }
+          break
+        case 'hang-up':
+          console.log('Received message: hang-up')
+          break
+        default:
+          console.log('Unknown received message: ' + obj.type)
+      }
+    })
 
-        // Pull tracks from remote stream, add to video stream
-        peerConnection.addEventListener('track', event => {
-          let remoteStream = new MediaStream()
+    connection.on('connect-error', () => {
+      console.log('IO connected error')
+    })
+  }
+
+  const createPeerConnection = () => {
+    if (!peerConnection.current || peerConnection.current == null) {
+      peerConnection.current = new RTCPeerConnection(servers)
+
+      mediaDevices.getUserMedia(mediaConstraints)
+      .then(stream => {
+        setLocalMediaStream(stream)
+        stream?.getTracks().forEach(track => {
+          peerConnection?.current?.addTrack(track)
+        })
+      })
+
+      peerConnection.current.addEventListener('icecandidate', event => {
+        if (event.candidate) {
+          sendToServer({
+            type: 'ice-candidate',
+            data: event.candidate
+          })
+        }
+      })
+
+      peerConnection.current.addEventListener('track', event => {
+        let remoteStream = new MediaStream()
           console.log('In Track')
           if (event.streams[0] != undefined) {
             console.log('streams[0]')
@@ -80,142 +161,45 @@ export const MainScreen = ({ navigation, route }) => {
             remoteStream = new MediaStream([event.track])
           }
           setRemoteMediaStream(remoteStream)
-        })
-
-        mediaDevices.getUserMedia(mediaConstraints)
-        .then(stream => {
-          setLocalMediaStream(stream)
-          stream?.getTracks().forEach(track => {
-            peerConnection?.addTrack(track)
-          })
-        })
-
-        channelDoc
-        .get()
-        .then(channelDocument => {
-          const offerDescription = channelDocument?.data()?.offer
-
-          peerConnection.setRemoteDescription(new RTCSessionDescription(offerDescription))
-
-          peerConnection
-          .createAnswer(sessionConstraints)
-          .then(answerDescription => {
-            peerConnection.setLocalDescription(answerDescription)
-
-            const answer = {
-              type: answerDescription.type,
-              sdp: answerDescription.sdp,
-            }
-      
-            channelDoc.update({ answer })
-          })
-        })
-
-        offerCandidates.onSnapshot(snapshot => {
-          snapshot.docChanges().forEach(async change => {
-            if (change.type === 'added') {
-              const data = change.doc.data()
-              await peerConnection.addIceCandidate(new RTCIceCandidate(data))
-            }
-          })
-        })
-
-        setCachedLocalPC(peerConnection)
-      } catch (err) {
-        // Handle Error
-      }
-    }
-    if (action == 'create') {
-      // qU1wKfqxKkfGAKDPdWGQ
-      const peerConnection = new RTCPeerConnection(servers)
-      const channelDoc = firestore().collection('channels').doc()
-      const offerCandidates = channelDoc.collection('offerCandidates')
-      const answerCandidates = channelDoc.collection('answerCandidates')
-
-      mediaDevices.getUserMedia(mediaConstraints)
-      .then(stream => {
-        setLocalMediaStream(stream)
-        stream?.getTracks().forEach(track => {
-          peerConnection?.addTrack(track)
-        })
       })
 
-      peerConnection.addEventListener('icecandidate', event => {
-        if (!event.candidate) {
-          console.log('Got final candidate!')
+      peerConnection.current.addEventListener('negotiationneeded', event => {
+        console.log("---------------Negotiation needed--------------")
+        if (peerConnection.current.signalingState != 'stable') {
           return
         }
-        offerCandidates.add(event.candidate.toJSON())
-      })
+        peerConnection.current.createOffer(sessionConstraints)
+        .then(offerDescription => {
+          peerConnection.current.setLocalDescription(offerDescription)
 
-      // Pull tracks from remote stream, add to video stream
-      peerConnection.addEventListener('track', event => {
-        let remoteStream = new MediaStream()
-        console.log('In Track')
-        if (event.streams[0] != undefined) {
-          console.log('streams[0]')
-          event.streams[0].getTracks().forEach(track => {
-            remoteStream.addTrack(track)
+          sendToServer({
+            type: 'offer',
+            data: offerDescription
           })
-        } else {
-          console.log('event.track')
-          remoteStream = new MediaStream([event.track])
-        }
-        setRemoteMediaStream(remoteStream)
-      })
-
-      //create offer
-      peerConnection
-      .createOffer(sessionConstraints)
-      .then(offerDescription => {
-        peerConnection.setLocalDescription(offerDescription)
-
-        const offer = {
-          sdp: offerDescription.sdp,
-          type: offerDescription.type,
-        }
-  
-        channelDoc.set({ offer })
-      })
-
-      channelDoc.onSnapshot(snapshot => {
-        const data = snapshot.data()
-        if (!peerConnection.remoteDescription && data?.answer
-            || peerConnection.remoteDescription != data?.answer) {
-          const answerDescription = new RTCSessionDescription(data.answer)
-          peerConnection.setRemoteDescription(answerDescription)
-        }
-      })
-
-      // When answered, add candidate to peer connection
-      answerCandidates.onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(async change => {
-          if (change.type === 'added') {
-            const data = change.doc.data()
-            peerConnection.addIceCandidate(new RTCIceCandidate(data))
-          }
         })
       })
 
-      setCachedLocalPC(peerConnection)
-    }
+      peerConnection.current.addEventListener('connectionstatechange', event => {
+        console.log("------Connection state: " + peerConnection.current.connectionState + "\n")
+      })
 
-    return () => {
-      if (localMediaStream != undefined) {
-        localMediaStream
-        .getTracks()
-        .map(track => {
-          track.stop()
-        })
-      }
-
-      if (cachedLocalPC) {
-        cachedLocalPC.close()
-        setCachedLocalPC(undefined)
-        setLocalMediaStream(undefined)
-        setRemoteMediaStream(undefined)
-      }
+      peerConnection.current.addEventListener( 'iceconnectionstatechange', event => {
+        console.log("-----------ICE Connection state: " + peerConnection.current.iceConnectionState + "\n")
+      })
     }
+  }
+
+  const start = () => {
+    createPeerConnection()
+  }
+
+  const startCall = () => {
+    start()
+  }
+
+  // handle WebRTC works
+  useEffect(() => {
+    connectServer()
   }, [])
 
   return (
@@ -225,7 +209,7 @@ export const MainScreen = ({ navigation, route }) => {
         remoteStream={remoteMediaStream}
       />
 
-      <BottomStack switchCamera={switchCamera}/>
+      <BottomStack switchCamera={startCall}/>
     </View>
   )
 }

@@ -10,6 +10,7 @@ const MeetingStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
+        orientation: 'portrait',
         animation: 'slide_from_right',
       }}>
       <Stack.Screen
