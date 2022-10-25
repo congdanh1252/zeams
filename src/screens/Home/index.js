@@ -34,6 +34,19 @@ const HomeScreen = () => {
           title={'New meeting'}
           onPress={() => navigateMeetingStack('create')}
         />
+        {/*
+          create roomId -> navigate ready screen
+          -> join -> send 'create' message to server -> server let socket join 'roomId'
+          -> exit -> end
+
+          another user enter code -> check roomId on server
+          -> exist -> let user in ready screen
+          -> join -> send 'join' message to server -> server let socket join 'roomId'
+
+          creator in room -> waiting for new one join room
+          -> new one send offer -> everyone in room listen and create new peerConnection
+          -> exchange offer/answer
+        */}
 
         <Button
           height={44}

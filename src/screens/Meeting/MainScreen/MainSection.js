@@ -53,7 +53,7 @@ const MainSection = ({ totalPeers, localStream, remoteStream }) => {
         <View style={styles.frameInfoRow}>
           <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.name}</Text>
 
-          <Ionicons name="mic-outline" size={20} color={'black'}/>
+          {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
         </View>
       </View>
     )
@@ -78,7 +78,7 @@ const MainSection = ({ totalPeers, localStream, remoteStream }) => {
   )
 }
 
-export default MainSection
+export default React.memo(MainSection)
 
 const styles = StyleSheet.create({
   container: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   frameInfoRow: {
     left: 16,
     bottom: 16,
-    width: '38%',
+    width: '34%', //38
     borderRadius: 4,
     paddingVertical: 2,
     flexDirection: 'row',

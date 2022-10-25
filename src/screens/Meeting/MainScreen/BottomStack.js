@@ -5,7 +5,6 @@ import { StyleSheet, TouchableHighlight, View } from "react-native"
 import COLOR from "../../../theme"
 import { windowWidth } from "../../../constants"
 
-
 const SingleButton = ({ name, onPress, isExitButton = false }) => {
   return (
     <TouchableHighlight
@@ -22,7 +21,7 @@ const SingleButton = ({ name, onPress, isExitButton = false }) => {
   )
 }
 
-const BottomStack = ({ switchCamera }) => {
+const BottomStack = ({ switchCamera, isMuted, toggleMute, hangUp }) => {
   const dummyFunction = () => {
 
   }
@@ -35,8 +34,8 @@ const BottomStack = ({ switchCamera }) => {
       />
 
       <SingleButton
-        name={'mic-outline'}
-        onPress={dummyFunction}
+        name={isMuted ? 'mic-off-outline' : 'mic-outline'}
+        onPress={toggleMute}
       />
 
       <SingleButton
@@ -52,7 +51,7 @@ const BottomStack = ({ switchCamera }) => {
       <SingleButton
         isExitButton={true}
         name={'close-outline'}
-        onPress={dummyFunction}
+        onPress={hangUp}
       />
     </View>
   )
@@ -73,9 +72,9 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    width: windowWidth * 0.135,
-    height: windowWidth * 0.135,
-    borderRadius: (windowWidth * 0.135) / 2,
+    width: windowWidth * 0.138,
+    height: windowWidth * 0.138,
+    borderRadius: (windowWidth * 0.138) / 2,
     backgroundColor: 'rgba(100, 100, 100, 0.3)',
   },
   exitButton: {

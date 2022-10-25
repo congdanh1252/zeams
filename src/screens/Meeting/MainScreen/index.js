@@ -6,9 +6,9 @@ import {
   mediaDevices,
 } from 'react-native-webrtc'
 import io from 'socket.io-client'
-import { StyleSheet, View } from "react-native"
 import firestore from '@react-native-firebase/firestore'
 import React, { useEffect, useRef, useState } from "react"
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 import COLOR from "../../../theme"
 import BottomStack from "./BottomStack"
@@ -39,16 +39,69 @@ const sessionConstraints = {
   offerToReceiveAudio: true,
   offerToReceiveVideo: true,
 }
+const connection = io(SERVER_URL, {transports: ['websocket']})
+//trigger even screen not render yet -> useRef
 
 export const MainScreen = ({ navigation, route }) => {
   // const { action, code } = 'create'//route?.params 
-  const connection = io(SERVER_URL, {transports: ['websocket']})
   const peerConnection = useRef(null)
+  const [ready, setReady] = useState(false)
+  const [muted, setMuted] = useState(false)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
   const [remoteMediaStream, setRemoteMediaStream] = useState(undefined)
 
   const switchCamera = () => {
-    localMediaStream.getVideoTracks().forEach(track => track._switchCamera())
+    if (localMediaStream && localMediaStream != undefined) {
+      localMediaStream?.getVideoTracks().forEach(track => track._switchCamera())
+    }
+  }
+
+  const toggleMute = () => {
+    if (!remoteMediaStream || remoteMediaStream == undefined ||
+        localMediaStream == undefined || !localMediaStream) {
+      return
+    }
+
+    localMediaStream?.getAudioTracks().forEach(track => {
+      track.enabled = !track.enabled
+    })
+    setMuted(!muted)
+  }
+
+  const handleCleanUpConnection = () => {
+    if (peerConnection.current && peerConnection.current != null) {
+      // peerConnection.current.removeTrack()
+      peerConnection.current.removeEventListener('track', () => {})
+      peerConnection.current.removeEventListener('icecandidate', () => {})
+      peerConnection.current.removeEventListener('negotiationneeded', () => {})
+      peerConnection.current.removeEventListener('connectionstatechange', () => {})
+      peerConnection.current.removeEventListener('iceconnectionstatechange', () => {})
+
+      peerConnection.current?.getTransceivers()?.forEach(transceiver => {
+        transceiver.stop()
+      })
+
+      if (localMediaStream != undefined) {
+        localMediaStream.getTracks().map(track => {
+          track.stop()
+        })
+      }
+
+      peerConnection.current.close()
+      peerConnection.current = null
+      setLocalMediaStream(undefined)
+      setRemoteMediaStream(undefined)
+    }
+  }
+
+  const hangUpCall = () => {
+    if (peerConnection.current != null && peerConnection.current) {
+      handleCleanUpConnection()
+
+      sendToServer({
+        type: 'hang-up'
+      })
+    }
   }
 
   const sendToServer = (msg) => {
@@ -57,6 +110,7 @@ export const MainScreen = ({ navigation, route }) => {
 
   const connectServer = () => {
     connection.on('connect', () => {
+      setReady(true)
       console.log('IO connected')
     })
 
@@ -72,15 +126,15 @@ export const MainScreen = ({ navigation, route }) => {
           try {
             if (!peerConnection.current || peerConnection.current == null) {
               console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-              start()
+              createPeerConnection()
             }
 
             if (obj.data != peerConnection.current?.localDescription) {
               console.log('Set offer as remote description')
-              if (peerConnection.current.signalingState != 'stable') {
+              if (peerConnection.current?.signalingState != 'stable') {
                 await Promise.all([
-                  peerConnection.current.setLocalDescription({type: "rollback"}),
-                  peerConnection.current.setRemoteDescription(obj?.data)
+                  peerConnection.current?.setLocalDescription({type: "rollback"}),
+                  peerConnection.current?.setRemoteDescription(obj?.data)
                 ])
               } else {
                 peerConnection.current.setRemoteDescription(obj?.data)
@@ -115,7 +169,7 @@ export const MainScreen = ({ navigation, route }) => {
           }
           break
         case 'hang-up':
-          console.log('Received message: hang-up')
+          handleCleanUpConnection()
           break
         default:
           console.log('Unknown received message: ' + obj.type)
@@ -139,7 +193,7 @@ export const MainScreen = ({ navigation, route }) => {
         })
       })
 
-      peerConnection.current.addEventListener('icecandidate', event => {
+      peerConnection.current?.addEventListener('icecandidate', event => {
         if (event.candidate) {
           sendToServer({
             type: 'ice-candidate',
@@ -148,7 +202,7 @@ export const MainScreen = ({ navigation, route }) => {
         }
       })
 
-      peerConnection.current.addEventListener('track', event => {
+      peerConnection.current?.addEventListener('track', event => {
         let remoteStream = new MediaStream()
           console.log('In Track')
           if (event.streams[0] != undefined) {
@@ -163,14 +217,14 @@ export const MainScreen = ({ navigation, route }) => {
           setRemoteMediaStream(remoteStream)
       })
 
-      peerConnection.current.addEventListener('negotiationneeded', event => {
+      peerConnection.current?.addEventListener('negotiationneeded', event => {
         console.log("---------------Negotiation needed--------------")
-        if (peerConnection.current.signalingState != 'stable') {
+        if (peerConnection.current?.signalingState != 'stable') {
           return
         }
-        peerConnection.current.createOffer(sessionConstraints)
+        peerConnection.current?.createOffer(sessionConstraints)
         .then(offerDescription => {
-          peerConnection.current.setLocalDescription(offerDescription)
+          peerConnection.current?.setLocalDescription(offerDescription)
 
           sendToServer({
             type: 'offer',
@@ -179,26 +233,22 @@ export const MainScreen = ({ navigation, route }) => {
         })
       })
 
-      peerConnection.current.addEventListener('connectionstatechange', event => {
-        console.log("------Connection state: " + peerConnection.current.connectionState + "\n")
+      peerConnection.current?.addEventListener('connectionstatechange', event => {
+        console.log("------Connection state: " + peerConnection.current?.connectionState + "\n")
       })
 
-      peerConnection.current.addEventListener( 'iceconnectionstatechange', event => {
-        console.log("-----------ICE Connection state: " + peerConnection.current.iceConnectionState + "\n")
+      peerConnection.current?.addEventListener( 'iceconnectionstatechange', event => {
+        console.log("-----------ICE Connection state: " + peerConnection.current?.iceConnectionState + "\n")
       })
     }
   }
 
-  const start = () => {
+  const startCall = () => {
     createPeerConnection()
   }
 
-  const startCall = () => {
-    start()
-  }
-
   // handle WebRTC works
-  useEffect(() => {
+  useEffect(() => { 
     connectServer()
   }, [])
 
@@ -208,8 +258,25 @@ export const MainScreen = ({ navigation, route }) => {
         localStream={localMediaStream}
         remoteStream={remoteMediaStream}
       />
+      
+      {
+        ready ?
+        <TouchableOpacity
+          onPress={startCall}
+          activeOpacity={0.7}
+          style={styles.callBtn}
+        >
+          <Text style={styles.readyText}>• You're ready to go</Text>
+        </TouchableOpacity>
+        : null
+      }
 
-      <BottomStack switchCamera={startCall}/>
+      <BottomStack
+        switchCamera={switchCamera}
+        hangUp={hangUpCall}
+        isMuted={muted}
+        toggleMute={toggleMute}
+      />
     </View>
   )
 }
@@ -220,4 +287,14 @@ const styles = StyleSheet.create({
     marginTop: statusBarHeight,
     backgroundColor: COLOR.black
   },
+  callBtn: {
+    top: 4,
+    padding: 2,
+    alignSelf: 'center',
+    textAlign: 'center',
+    position: 'absolute',
+  },
+  readyText: {
+    color: '#0ECB81',
+  }
 })
