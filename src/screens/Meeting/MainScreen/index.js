@@ -6,15 +6,16 @@ import {
   mediaDevices,
 } from 'react-native-webrtc'
 import io from 'socket.io-client'
-import firestore from '@react-native-firebase/firestore'
 import React, { useEffect, useRef, useState } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 import COLOR from "../../../theme"
 import BottomStack from "./BottomStack"
 import MainSection from "./MainSection"
-import { SERVER_URL, statusBarHeight, windowWidth } from "../../../constants"
+import { statusBarHeight } from "../../../constants"
+import { connection as socketInit } from '../../../utils'
 
+const userId = 'abcxyz'
 const servers = {
   iceServers: [
     {
@@ -39,16 +40,23 @@ const sessionConstraints = {
   offerToReceiveAudio: true,
   offerToReceiveVideo: true,
 }
-const connection = io(SERVER_URL, {transports: ['websocket']})
-//trigger even screen not render yet -> useRef
+const connection = socketInit
 
 export const MainScreen = ({ navigation, route }) => {
-  // const { action, code } = 'create'//route?.params 
+  const { action, roomId } = route?.params 
   const peerConnection = useRef(null)
   const [ready, setReady] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [initialising, setInitialising] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
   const [remoteMediaStream, setRemoteMediaStream] = useState(undefined)
+
+  const preLoadLocalStream = () => {
+    mediaDevices.getUserMedia(mediaConstraints)
+    .then(stream => {
+      setLocalMediaStream(stream)
+    })
+  }
 
   const switchCamera = () => {
     if (localMediaStream && localMediaStream != undefined) {
@@ -70,12 +78,12 @@ export const MainScreen = ({ navigation, route }) => {
 
   const handleCleanUpConnection = () => {
     if (peerConnection.current && peerConnection.current != null) {
-      // peerConnection.current.removeTrack()
-      peerConnection.current.removeEventListener('track', () => {})
-      peerConnection.current.removeEventListener('icecandidate', () => {})
-      peerConnection.current.removeEventListener('negotiationneeded', () => {})
-      peerConnection.current.removeEventListener('connectionstatechange', () => {})
-      peerConnection.current.removeEventListener('iceconnectionstatechange', () => {})
+      peerConnection.current.removeAllListeners()
+      // peerConnection.current.removeEventListener('track', () => {})
+      // peerConnection.current.removeEventListener('icecandidate', () => {})
+      // peerConnection.current.removeEventListener('negotiationneeded', () => {})
+      // peerConnection.current.removeEventListener('connectionstatechange', () => {})
+      // peerConnection.current.removeEventListener('iceconnectionstatechange', () => {})
 
       peerConnection.current?.getTransceivers()?.forEach(transceiver => {
         transceiver.stop()
@@ -87,10 +95,13 @@ export const MainScreen = ({ navigation, route }) => {
         })
       }
 
+      connection.removeAllListeners()
+      connection.disconnect()
       peerConnection.current.close()
       peerConnection.current = null
       setLocalMediaStream(undefined)
       setRemoteMediaStream(undefined)
+      console.log('-------Clean up connection------')
     }
   }
 
@@ -99,7 +110,8 @@ export const MainScreen = ({ navigation, route }) => {
       handleCleanUpConnection()
 
       sendToServer({
-        type: 'hang-up'
+        type: 'hang-up',
+        roomId: roomId
       })
     }
   }
@@ -109,8 +121,16 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const connectServer = () => {
-    connection.on('connect', () => {
-      setReady(true)
+    connection.on('connect', (socket) => {
+      sendToServer({
+        type: 'join',
+        roomId: roomId,
+        data: {
+          sender: userId
+        },
+        create: action == 'join' ? false : true
+      })
+
       console.log('IO connected')
     })
 
@@ -119,8 +139,11 @@ export const MainScreen = ({ navigation, route }) => {
       switch(obj?.type) {
         case 'id':
           break
-        case 'message':
-          console.log(msg)
+        case 'join':
+          if (obj.data.receiver != null && obj.data.receiver == userId) {
+            setReady(true)
+            setInitialising(false)
+          }
           break
         case 'offer':
           try {
@@ -147,6 +170,7 @@ export const MainScreen = ({ navigation, route }) => {
 
               sendToServer({
                 type: "answer",
+                roomId: roomId,
                 data: answerDescription
               })
             })
@@ -197,6 +221,7 @@ export const MainScreen = ({ navigation, route }) => {
         if (event.candidate) {
           sendToServer({
             type: 'ice-candidate',
+            roomId: roomId,
             data: event.candidate
           })
         }
@@ -228,6 +253,7 @@ export const MainScreen = ({ navigation, route }) => {
 
           sendToServer({
             type: 'offer',
+            roomId: roomId,
             data: offerDescription
           })
         })
@@ -249,7 +275,12 @@ export const MainScreen = ({ navigation, route }) => {
 
   // handle WebRTC works
   useEffect(() => { 
+    preLoadLocalStream()
     connectServer()
+
+    return () => {
+      handleCleanUpConnection()
+    }
   }, [])
 
   return (
@@ -277,6 +308,21 @@ export const MainScreen = ({ navigation, route }) => {
         isMuted={muted}
         toggleMute={toggleMute}
       />
+
+      {/* Overlay */}
+      {
+        initialising ?
+        <View style={styles.overlay}>
+          <ActivityIndicator
+            size='large'
+            color={COLOR.white}
+          />
+
+          <Text style={[styles.whiteText, {textAlign: 'center', marginTop: 20}]}>
+            Please wait few seconds{'\n'}to initialise
+          </Text>
+        </View> : null
+      }
     </View>
   )
 }
@@ -296,5 +342,16 @@ const styles = StyleSheet.create({
   },
   readyText: {
     color: '#0ECB81',
-  }
+  },
+  whiteText: {
+    color: COLOR.white
+  },
+  overlay: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
 })

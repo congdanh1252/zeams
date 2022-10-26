@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 4,
     paddingHorizontal: 12,
+    backgroundColor: COLOR.white,
     marginTop: statusBarHeight,
   },
   list: {

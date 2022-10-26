@@ -1,31 +1,55 @@
 import React, { useState, useEffect } from 'react'
-import {
-  RTCView,
-  mediaDevices,
-} from 'react-native-webrtc'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import { RTCView, mediaDevices } from 'react-native-webrtc'
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Alert } from 'react-native'
 
 import COLOR from '../../../theme'
+import BackButton from '../../../components/BackButton'
+
+const isVoiceOnly = false
+const mediaConstraints = {
+  audio: true,
+  video: {
+    frameRate: 60,
+    facingMode: 'user', // 'user'
+  },
+}
 
 export const JoinMeeting = ({ navigation, route }) => {
-  const { action, code } = route?.params
-  const isVoiceOnly = false
-  const mediaConstraints = {
-    audio: true,
-    video: {
-      frameRate: 60,
-      facingMode: 'user', // 'user'
-    },
-  }
+  const { action, roomId } = route?.params
   const [isMicEnable, setIsMicEnable] = useState(true)
   const [isCamEnable, setIsCamEnable] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
+
+  const goBack = () => {
+    navigation.goBack()
+  }
+
+  const copyRoomId = () => {
+    Clipboard.setString(roomId)
+
+    Alert.alert(
+      "COPIED",
+      "Room code has been in your clipboard now",
+      [
+        { text: "OK" }
+      ]
+    )
+  }
+
+  const convertCodeToDisplay = (code) => {
+    let result = '';
+    [...code].forEach((char, index) => {
+      if (index == 2) {
+        result += char + '-'
+      } else {
+        result += char
+      }
+    })
+
+    return result
+  }
 
   const handleJoiningMeet = () => {
     if (localMediaStream != undefined) {
@@ -41,7 +65,7 @@ export const JoinMeeting = ({ navigation, route }) => {
     navigation.navigate(
       'MeetingScreen', {
         action: action,
-        code: code
+        roomId: roomId
       }
     )
   }
@@ -69,25 +93,36 @@ export const JoinMeeting = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.blackText}>abc-defg-xyz</Text>
+      <BackButton onPress={goBack}/>
+
+      <Pressable
+        onPress={copyRoomId}
+        style={({ pressed }) => [
+          styles.codeHolder, {
+            backgroundColor: pressed ? 'black' : 'white'
+          }
+        ]}
+      >
+        {({ pressed }) => (
+          <Text style={[pressed ? styles.whiteText : styles.blackText, styles.userText]}>
+            {convertCodeToDisplay(roomId)}
+          </Text>
+        )}
+      </Pressable>
+
       {localMediaStream != undefined ? (
-        <RTCView
-          zOrder={50}
-          mirror={false}
-          objectFit={'cover'}
-          style={styles.videoFrame}
-          streamURL={localMediaStream.toURL()}
-        />
+        <View style={styles.videoFrameWrapper}>
+          <RTCView
+            zOrder={50}
+            mirror={false}
+            objectFit={'cover'}
+            style={styles.videoFrame}
+            streamURL={localMediaStream.toURL()}
+          />
+        </View>
       ) : null}
 
-      <View
-        style={{
-          display: 'flex',
-          width: '50%',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+      <View style={styles.micCamStack}>
         <TouchableOpacity
           style={styles.icon}
           onPress={() => setIsCamEnable(!isCamEnable)}>
@@ -111,22 +146,24 @@ export const JoinMeeting = ({ navigation, route }) => {
 
       <View
         style={{
+          width: '100%',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
         <TouchableOpacity
+          activeOpacity={0.85}
           onPress={handleJoiningMeet}
           style={[styles.button, styles.blackButton]}
         >
           <Ionicons
-            style={{marginRight: 4}}
+            style={{marginRight: 8}}
             size={20}
             name="videocam-outline"
             color={COLOR.white}
           />
-          <Text style={styles.whiteText}>Join</Text>
+          <Text style={styles.whiteText}>{action == 'join' ? 'Join' : 'Create'}</Text>
         </TouchableOpacity>
-        <Text style={styles.blackText}>Joining as</Text>
+        <Text style={styles.blackText}>Continue as</Text>
         <Text style={[styles.userText, styles.blackText]}>tngcdng@gmail.com</Text>
       </View>
     </View>
@@ -140,36 +177,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLOR.white,
   },
-  fullWidth: {
-    width: '100%',
-  },
-  text: {
-    marginBottom: 8,
-  },
-  logo: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 300,
-    height: 300,
-  },
-  input: {
-    display: 'flex',
-    alignItems: 'center',
-    width: '80%',
-    borderRadius: 5,
-    marginBottom: 20,
-    borderWidth: 2,
-  },
-  button: {
+  micCamStack: {
+    width: '50%',
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '25%',
+    justifyContent: 'space-between',
+  },
+  button: {
+    width: '32%',
     padding: 10,
     borderRadius: 5,
-    marginBottom: 20,
     borderWidth: 2,
+    marginVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   blackButton: {
     backgroundColor: COLOR.black,
@@ -181,14 +204,20 @@ const styles = StyleSheet.create({
     color: COLOR.white,
   },
   userText: {
+    fontSize: 19,
     fontWeight: 'bold',
-    fontSize: 20,
   },
   videoFrame: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
+  videoFrameWrapper: {
     width: '50%',
     height: '50%',
-    marginVertical: 20,
     borderRadius: 20,
+    marginVertical: 20,
+    overflow: 'hidden',
   },
   icon: {
     padding: 8,
@@ -196,4 +225,12 @@ const styles = StyleSheet.create({
     borderColor: COLOR.primary,
     borderWidth: 1,
   },
+  codeHolder: {
+    marginTop: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderColor: COLOR.black,
+  }
 })

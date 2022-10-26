@@ -9,10 +9,21 @@ import Button from '../../components/Button'
 const HomeScreen = () => {
   const navigation = useNavigation()
 
+  const generateRoomId = () => {
+    var result = ""
+    var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    var charactersLength = characters.length
+    for (var i = 0; i < 6; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    }
+    return result
+  }
+
   const navigateMeetingStack = (action) => {
     navigation.navigate('MeetingStack', {
       params: {
-        action: action
+        action: action,
+        roomId: action == 'create' ? generateRoomId() : null
       },
       screen: action == 'join' ? 'EnterCode' : 'JoinMeeting'
     })
@@ -28,12 +39,21 @@ const HomeScreen = () => {
 
       <View style={styles.buttons}>
         <Button
-          height={44}
+          height={46}
           width={'80%'}
           hasBlackBg={true}
           title={'New meeting'}
           onPress={() => navigateMeetingStack('create')}
         />
+
+        <Button
+          height={46}
+          width={'80%'}
+          hasBlackBg={false}
+          title={'Join a meeting'}
+          onPress={() => navigateMeetingStack('join')}
+        />
+
         {/*
           create roomId -> navigate ready screen
           -> join -> send 'create' message to server -> server let socket join 'roomId'
@@ -47,14 +67,6 @@ const HomeScreen = () => {
           -> new one send offer -> everyone in room listen and create new peerConnection
           -> exchange offer/answer
         */}
-
-        <Button
-          height={44}
-          width={'80%'}
-          hasBlackBg={false}
-          title={'Join a meeting'}
-          onPress={() => navigateMeetingStack('join')}
-        />
       </View>
     </View>
   )

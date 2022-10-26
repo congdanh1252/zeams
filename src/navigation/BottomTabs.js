@@ -49,7 +49,8 @@ const BottomTabs = () => {
           backgroundColor: COLOR.black,
         },
         tabBarShowLabel: false,
-      })}>
+      })}
+    >
       <Tab.Screen
         name="Home"
         component={HomeScreen}

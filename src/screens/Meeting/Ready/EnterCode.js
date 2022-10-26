@@ -6,39 +6,49 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native'
 import firestore from '@react-native-firebase/firestore'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
 import COLOR from '../../../theme'
 import { VISUAL_IMG } from '../../../assets'
+import BackButton from '../../../components/BackButton'
 
 const ERROR_TEXT = {
   BLANK_CODE: 'Blank room code',
   WRONG_CODE: 'Make sure you have entered correct code'
 }
 
-// CODE: kwRI61JJAqHZmQ1jJDWY
-
 export const EnterCode = ({route, navigation}) => {
   const [roomCode, setRoomCode] = useState('')
   const [errorText, setErrorText] = useState('')
 
+  const goBack = () => {
+    navigation.goBack()
+  }
+
   const navigateReadyScreen = () => {
     navigation.navigate('JoinMeeting', {
       action: 'join',
-      code: roomCode
+      roomId: roomCode
     })
   }
 
   const checkRoomCodeExist = () => {
     if (roomCode != '') {
-      firestore().collection('channels').doc(roomCode)
+      firestore().collection('rooms')
       .get()
-      .then(doc => {
-        if (doc.exists) {
-          navigateReadyScreen()
-        } else {
+      .then(querySnapshot => {
+        let exist = false
+        querySnapshot.forEach(documentSnapshot => {
+          if (documentSnapshot.data()?.roomId == roomCode) {
+            exist = true
+            navigateReadyScreen()
+            return
+          }
+        })
+        if (!exist) {
           setErrorText(ERROR_TEXT.WRONG_CODE)
         }
       })
@@ -54,7 +64,10 @@ export const EnterCode = ({route, navigation}) => {
       keyboardShouldPersistTaps='handled'
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.container}
+      extraScrollHeight={Platform.OS == 'ios' ? 42 : -50}
     >
+      <BackButton onPress={goBack}/>
+
       <View style={styles.logo}>
         <Image
           style={styles.logo}
@@ -75,8 +88,14 @@ export const EnterCode = ({route, navigation}) => {
           style={styles.input}
           placeholder="Enter code"
           keyboardType='default'
+          autoCapitalize='characters'
           placeholderTextColor={COLOR.drakGray}
-          onChangeText={val => setRoomCode(val)}
+          onChangeText={val => {
+            if (errorText != '') {
+              setErrorText('')
+            }
+            setRoomCode(val)
+          }}
           onSubmitEditing={checkRoomCodeExist}
         />
       </View>
@@ -118,7 +137,7 @@ const styles = StyleSheet.create({
   },
   inputHolder: {
     width: '80%',
-    height: 42,
+    height: 46,
     borderRadius: 5,
     borderWidth: 2,
     marginTop: 12,
@@ -128,7 +147,7 @@ const styles = StyleSheet.create({
   },
   errorInputHolder: {
     width: '80%',
-    height: 42,
+    height: 46,
     borderRadius: 5,
     borderWidth: 2,
     marginTop: 12,
@@ -142,6 +161,7 @@ const styles = StyleSheet.create({
     color: COLOR.black,
   },
   button: {
+    height: 46,
     display: 'flex',
     alignItems: 'center',
     width: '80%',

@@ -13,8 +13,8 @@ const App = () => {
         backgroundColor={'black'}
       />
       
-      {/* <MainStack /> */}
-      <MainScreen />
+      <MainStack />
+      {/* <MainScreen /> */}
     </SafeAreaView>
   )
 }

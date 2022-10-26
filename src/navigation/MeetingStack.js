@@ -12,11 +12,12 @@ const MeetingStack = () => {
       screenOptions={{
         orientation: 'portrait',
         animation: 'slide_from_right',
-      }}>
+      }}
+    >
       <Stack.Screen
         name="EnterCode"
         component={EnterCode}
-        options={{headerShown: false}}
+        options={{headerShown: false, orientation: 'portrait'}}
       />
       <Stack.Screen
         name="JoinMeeting"
