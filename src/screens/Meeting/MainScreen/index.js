@@ -5,17 +5,20 @@ import {
   MediaStream,
   mediaDevices,
 } from 'react-native-webrtc'
+import { useSelector } from 'react-redux'
 import io from 'socket.io-client'
+import firestore from '@react-native-firebase/firestore'
 import React, { useEffect, useRef, useState } from "react"
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 import COLOR from "../../../theme"
 import BottomStack from "./BottomStack"
 import MainSection from "./MainSection"
+import { SERVER_URL } from '../../../constants'
 import { statusBarHeight } from "../../../constants"
-import { connection as socketInit } from '../../../utils'
+import { connection } from '../../../utils'
+import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 
-const userId = 'abcxyz'
 const servers = {
   iceServers: [
     {
@@ -40,16 +43,43 @@ const sessionConstraints = {
   offerToReceiveAudio: true,
   offerToReceiveVideo: true,
 }
-const connection = socketInit
+// const connection = socketInit
 
 export const MainScreen = ({ navigation, route }) => {
-  const { action, roomId } = route?.params 
-  const peerConnection = useRef(null)
+  const { action, roomId, roomRef } = route?.params 
+  const otherPeers = useRef([])
+  const [others, setOthers] = useState([])
+  // const peerConnection = useRef(null)
+  const userId = useSelector(selectUserId)
   const [ready, setReady] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [docRef, setDocRef] = useState(roomId)
   const [initialising, setInitialising] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
   const [remoteMediaStream, setRemoteMediaStream] = useState(undefined)
+
+  const deepClonePeers = () => {
+    let result = []
+    const clone = [...otherPeers.current]
+    clone.forEach(peer => {
+      result.push(Object.assign({}, peer))
+    })
+
+    setOthers(result)
+  }
+
+  const findOfferIndex = (msg) => {
+    let result = -1
+    for (let i = 0; i < otherPeers.current.length; i++) {
+      const peer = otherPeers.current[i]
+
+      if (peer.id == msg.sender) {
+        result = i
+        break
+      }
+    }
+    return result
+  }
 
   const preLoadLocalStream = () => {
     mediaDevices.getUserMedia(mediaConstraints)
@@ -77,43 +107,46 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const handleCleanUpConnection = () => {
-    if (peerConnection.current && peerConnection.current != null) {
-      peerConnection.current.removeAllListeners()
-      // peerConnection.current.removeEventListener('track', () => {})
-      // peerConnection.current.removeEventListener('icecandidate', () => {})
-      // peerConnection.current.removeEventListener('negotiationneeded', () => {})
-      // peerConnection.current.removeEventListener('connectionstatechange', () => {})
-      // peerConnection.current.removeEventListener('iceconnectionstatechange', () => {})
+    // if (peerConnection.current && peerConnection.current != null) {
+    //   peerConnection.current.removeAllListeners()
+    //   // peerConnection.current.removeEventListener('track', () => {})
+    //   // peerConnection.current.removeEventListener('icecandidate', () => {})
+    //   // peerConnection.current.removeEventListener('negotiationneeded', () => {})
+    //   // peerConnection.current.removeEventListener('connectionstatechange', () => {})
+    //   // peerConnection.current.removeEventListener('iceconnectionstatechange', () => {})
 
-      peerConnection.current?.getTransceivers()?.forEach(transceiver => {
-        transceiver.stop()
-      })
+    //   peerConnection.current?.getTransceivers()?.forEach(transceiver => {
+    //     transceiver.stop()
+    //   })
 
-      if (localMediaStream != undefined) {
-        localMediaStream.getTracks().map(track => {
-          track.stop()
-        })
-      }
+    //   if (localMediaStream != undefined) {
+    //     localMediaStream.getTracks().map(track => {
+    //       track.stop()
+    //     })
+    //   }
 
-      connection.removeAllListeners()
-      connection.disconnect()
-      peerConnection.current.close()
-      peerConnection.current = null
-      setLocalMediaStream(undefined)
-      setRemoteMediaStream(undefined)
-      console.log('-------Clean up connection------')
-    }
+    //   connection.removeAllListeners()
+    //   connection.disconnect()
+    //   peerConnection.current.close()
+    //   peerConnection.current = null
+    //   setLocalMediaStream(undefined)
+    //   setRemoteMediaStream(undefined)
+    //   console.log('-------Clean up connection------')
+    // }
   }
 
   const hangUpCall = () => {
-    if (peerConnection.current != null && peerConnection.current) {
-      handleCleanUpConnection()
+    // if (peerConnection.current != null && peerConnection.current) {
+    //   handleCleanUpConnection()
 
-      sendToServer({
-        type: 'hang-up',
-        roomId: roomId
-      })
-    }
+    //   sendToServer({
+    //     type: 'hang-up',
+    //     roomId: roomId,
+    //     data: {
+    //       sender: userId,
+    //     }
+    //   })
+    // }
   }
 
   const sendToServer = (msg) => {
@@ -121,18 +154,29 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const connectServer = () => {
-    connection.on('connect', (socket) => {
-      sendToServer({
-        type: 'join',
-        roomId: roomId,
-        data: {
-          sender: userId
-        },
-        create: action == 'join' ? false : true
-      })
-
-      console.log('IO connected')
+    console.log('going to connect')
+    sendToServer({
+      type: 'join',
+      roomId: roomId,
+      roomRef: roomRef,
+      data: {
+        sender: userId
+      },
+      create: action == 'join' ? false : true
     })
+    // connection.on('connect', (socket) => {
+    //   console.log('connected')
+    //   sendToServer({
+    //     type: 'join',
+    //     roomId: roomId,
+    //     data: {
+    //       sender: userId
+    //     },
+    //     create: action == 'join' ? false : true
+    //   })
+
+    //   console.log('IO connected')
+    // })
 
     connection.on('message', async (msg) => {
       const obj = JSON.parse(msg)
@@ -141,59 +185,107 @@ export const MainScreen = ({ navigation, route }) => {
           break
         case 'join':
           if (obj.data.receiver != null && obj.data.receiver == userId) {
+            setDocRef(obj.data.docRef)
+
+            let arr = []
+            obj.data.participants.forEach(person => {
+              if (person != userId) {
+                arr.push({
+                  id: person,
+                  remoteStream: undefined,
+                  peerConnection: undefined
+                })
+              }
+            })
+            otherPeers.current = arr
             setReady(true)
             setInitialising(false)
           }
           break
         case 'offer':
           try {
-            if (!peerConnection.current || peerConnection.current == null) {
-              console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-              createPeerConnection()
-            }
+            if (obj.receiver == userId) {
+              const check = findOfferIndex(obj)
 
-            if (obj.data != peerConnection.current?.localDescription) {
-              console.log('Set offer as remote description')
-              if (peerConnection.current?.signalingState != 'stable') {
-                await Promise.all([
-                  peerConnection.current?.setLocalDescription({type: "rollback"}),
-                  peerConnection.current?.setRemoteDescription(obj?.data)
-                ])
-              } else {
-                peerConnection.current.setRemoteDescription(obj?.data)
+              if (check < 0) {
+                otherPeers.current.push({
+                  id: obj.sender,
+                  remoteStream: undefined,
+                  peerConnection: undefined
+                })
               }
-            }
+              const index = findOfferIndex(obj)
 
-            peerConnection.current.createAnswer(sessionConstraints)
-            .then(answerDescription => {
-              peerConnection.current.setLocalDescription(answerDescription)
+              if (!otherPeers.current[index].peerConnection) {
+                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                createPeerConnection(index)
+              }
 
-              sendToServer({
-                type: "answer",
-                roomId: roomId,
-                data: answerDescription
+              if (obj.data != otherPeers.current[index].peerConnection?.localDescription) {
+                if (otherPeers.current[index].peerConnection.signalingState != 'stable') {
+                  await Promise.all([
+                    otherPeers.current[index].peerConnection?.setLocalDescription({type: "rollback"}),
+                    otherPeers.current[index].peerConnection?.setRemoteDescription(obj?.data)
+                  ])
+                } else {
+                  otherPeers.current[index].peerConnection?.setRemoteDescription(obj?.data)
+                }
+              }
+
+              otherPeers.current[index].peerConnection?.createAnswer(sessionConstraints)
+              .then(answerDescription => {
+                otherPeers.current[index].peerConnection?.setLocalDescription(answerDescription)
+
+                sendToServer({
+                  type: "answer",
+                  roomId: roomId,
+                  sender: userId,
+                  receiver: otherPeers.current[index].id,
+                  data: answerDescription
+                })
               })
-            })
-
-            console.log('Received message: offer')
+            }
           } catch (e) {
 
           }
           break
         case 'answer':
-          peerConnection.current.setRemoteDescription(obj.data)
-          console.log('Received message: answer')
+          if (obj.receiver == userId) {
+            const check = findOfferIndex(obj)
+
+            if (check < 0) {
+              otherPeers.current.push({
+                id: obj.sender,
+                remoteStream: undefined,
+                peerConnection: undefined
+              })
+            }
+            const index = findOfferIndex(obj)
+            otherPeers.current[index].peerConnection?.setRemoteDescription(obj.data)
+          }
           break
         case 'ice-candidate':
           try {
-            peerConnection.current.addIceCandidate(new RTCIceCandidate(obj.data))
-            console.log('Received message: ice-candidate')
+            const check = findOfferIndex(obj)
+
+            if (obj.receiver == userId && obj.sender == otherPeers.current[check].id) {
+              if (check < 0) {
+                otherPeers.current.push({
+                  id: obj.sender,
+                  remoteStream: undefined,
+                  peerConnection: undefined
+                })
+              }
+              const index = findOfferIndex(obj)
+              otherPeers.current[index].peerConnection.addIceCandidate(new RTCIceCandidate(obj.data))
+              deepClonePeers()
+            }
           } catch(err) {
             
           }
           break
         case 'hang-up':
-          handleCleanUpConnection()
+          // handleCleanUpConnection()
           break
         default:
           console.log('Unknown received message: ' + obj.type)
@@ -205,29 +297,32 @@ export const MainScreen = ({ navigation, route }) => {
     })
   }
 
-  const createPeerConnection = () => {
-    if (!peerConnection.current || peerConnection.current == null) {
-      peerConnection.current = new RTCPeerConnection(servers)
+  const createPeerConnection = (index) => {
+    if (!otherPeers.current[index].peerConnection || otherPeers.current[index].peerConnection == undefined) {
+      console.log(`~ ~ ~ ~ ~ ~ CREATE PEERCONNECTION: ${otherPeers.current[index].id}~ ~ ~ ~ ~ ~`)
+      otherPeers.current[index].peerConnection = new RTCPeerConnection(servers)
 
       mediaDevices.getUserMedia(mediaConstraints)
       .then(stream => {
         setLocalMediaStream(stream)
         stream?.getTracks().forEach(track => {
-          peerConnection?.current?.addTrack(track)
+          otherPeers.current[index].peerConnection.addTrack(track)
         })
       })
 
-      peerConnection.current?.addEventListener('icecandidate', event => {
+      otherPeers.current[index].peerConnection?.addEventListener('icecandidate', event => {
         if (event.candidate) {
           sendToServer({
             type: 'ice-candidate',
             roomId: roomId,
+            sender: userId,
+            receiver: otherPeers.current[index].id,
             data: event.candidate
           })
         }
       })
 
-      peerConnection.current?.addEventListener('track', event => {
+      otherPeers.current[index].peerConnection?.addEventListener('track', event => {
         let remoteStream = new MediaStream()
           console.log('In Track')
           if (event.streams[0] != undefined) {
@@ -238,33 +333,43 @@ export const MainScreen = ({ navigation, route }) => {
           } else {
             console.log('event.track')
             remoteStream = new MediaStream([event.track])
+            otherPeers.current[index].remoteStream = new MediaStream([event.track])
           }
-          setRemoteMediaStream(remoteStream)
+          otherPeers.current[index].remoteStream = remoteStream
+          deepClonePeers()
       })
 
-      peerConnection.current?.addEventListener('negotiationneeded', event => {
+      otherPeers.current[index].peerConnection?.addEventListener('negotiationneeded', event => {
         console.log("---------------Negotiation needed--------------")
-        if (peerConnection.current?.signalingState != 'stable') {
+        if (otherPeers.current[index].peerConnection?.signalingState != 'stable') {
           return
         }
-        peerConnection.current?.createOffer(sessionConstraints)
+        otherPeers.current[index].peerConnection?.createOffer(sessionConstraints)
         .then(offerDescription => {
-          peerConnection.current?.setLocalDescription(offerDescription)
+          otherPeers.current[index].peerConnection?.setLocalDescription(offerDescription)
 
           sendToServer({
             type: 'offer',
             roomId: roomId,
+            sender: userId,
+            receiver: otherPeers.current[index].id,
             data: offerDescription
           })
         })
       })
 
-      peerConnection.current?.addEventListener('connectionstatechange', event => {
-        console.log("------Connection state: " + peerConnection.current?.connectionState + "\n")
+      otherPeers.current[index].peerConnection?.addEventListener('connectionstatechange', event => {
+        if (otherPeers.current[index].peerConnection?.connectionState == 'connected') {
+          deepClonePeers()
+        }
+        console.log("------Connection state: " + otherPeers.current[index].peerConnection?.connectionState + "\n")
       })
 
-      peerConnection.current?.addEventListener( 'iceconnectionstatechange', event => {
-        console.log("-----------ICE Connection state: " + peerConnection.current?.iceConnectionState + "\n")
+      otherPeers.current[index].peerConnection?.addEventListener( 'iceconnectionstatechange', event => {
+        if (otherPeers.current[index].peerConnection?.iceConnectionState == 'completed') {
+          deepClonePeers()
+        }
+        console.log("-----------ICE Connection state: " + otherPeers.current[index].peerConnection?.iceConnectionState + "\n")
       })
     }
   }
@@ -273,7 +378,7 @@ export const MainScreen = ({ navigation, route }) => {
     createPeerConnection()
   }
 
-  // handle WebRTC works
+  // initialize socket-io connection
   useEffect(() => { 
     preLoadLocalStream()
     connectServer()
@@ -283,11 +388,47 @@ export const MainScreen = ({ navigation, route }) => {
     }
   }, [])
 
+  // listen join room event
+  // useEffect(() => {
+  //   let joiningSubscriber = undefined 
+
+  //   if (roomRef != roomId) {
+  //     console.log('\n' + ' - - - - - - - ' + roomRef + ' - - - - - - - ' + '\n')
+  //     joiningSubscriber = firestore()
+  //     .collection('rooms')
+  //     .doc(roomRef)
+  //     .onSnapshot(snapshot => {
+  //       if (snapshot.exists) {
+  //         const participants = snapshot.data()?.participants || []
+          
+  //       }
+  //     })
+  //   }
+
+  //   return () => joiningSubscriber ? joiningSubscriber() : null
+  // }, [roomRef])
+
+  // handle create peerConnection for other peers
+  useEffect(() => {
+    if (otherPeers.current.length > 0) {
+      otherPeers.current.forEach((peer, index) => {
+        console.log("CONNECTION INDEX: " + index)
+        createPeerConnection(index)
+      })
+    }
+  }, [otherPeers.current])
+
+  // Xet tu tren xuong duoi, theo join-time tang dan, node phia duoi phai gui offer cho tat ca node phia tren
+  // == node vao sau phai gui offer cho tat ca node da~ vao truoc
+
+  // get previous participants in db -> add newly joined user to participants arr -> callback with array of previous
+  // -> create ARR.LENGTH peerConnections 
+
   return (
     <View style={styles.container}>
       <MainSection
+        peers={others}
         localStream={localMediaStream}
-        remoteStream={remoteMediaStream}
       />
       
       {
@@ -303,10 +444,10 @@ export const MainScreen = ({ navigation, route }) => {
       }
 
       <BottomStack
-        switchCamera={switchCamera}
-        hangUp={hangUpCall}
         isMuted={muted}
+        hangUp={hangUpCall}
         toggleMute={toggleMute}
+        switchCamera={switchCamera}
       />
 
       {/* Overlay */}

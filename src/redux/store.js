@@ -1,10 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit'
 
-import { authenticationSlice } from './slices/AuthenticationSlice'
+import authenticationReducer from './slices/AuthenticationSlice'
 
 export const store = configureStore({
   reducer: {
-    authentication: authenticationSlice,
+    authentication: authenticationReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

@@ -11,7 +11,7 @@ const BackButton = ({ onPress }) => {
       activeOpacity={0.8}
       style={styles.button}
     >
-      <Ionicons name="chevron-back-outline" color={COLOR.white} size={20}/>
+      <Ionicons name="chevron-back-outline" color={COLOR.white} size={22}/>
     </TouchableOpacity>
   )
 }

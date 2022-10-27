@@ -1,23 +1,17 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useDispatch } from 'react-redux'
 import { View, StyleSheet, Image } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 
 import COLOR from '../../theme'
 import { VISUAL_IMG } from '../../assets'
 import Button from '../../components/Button'
+import { generateRoomId } from '../../utils'
+import { selectUserId, setUserId } from '../../redux/slices/AuthenticationSlice'
 
 const HomeScreen = () => {
+  const dispatch = useDispatch()
   const navigation = useNavigation()
-
-  const generateRoomId = () => {
-    var result = ""
-    var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    var charactersLength = characters.length
-    for (var i = 0; i < 6; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength))
-    }
-    return result
-  }
 
   const navigateMeetingStack = (action) => {
     navigation.navigate('MeetingStack', {
@@ -28,6 +22,15 @@ const HomeScreen = () => {
       screen: action == 'join' ? 'EnterCode' : 'JoinMeeting'
     })
   }
+
+  // gen userId
+  useEffect(() => {
+    dispatch(
+      setUserId({
+        userId: generateRoomId()
+      })
+    )
+  }, [])
 
   return (
     <View style={styles.container}>

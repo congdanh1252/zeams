@@ -1,24 +1,16 @@
 import React from "react"
 import { RTCView } from "react-native-webrtc"
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native"
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native"
 
 import COLOR from "../../../theme"
 import { windowWidth } from "../../../constants"
+import { useSelector } from "react-redux"
+import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
 
-const TEMP = [
-  {
-    id: 1,
-    name: 'Bukayo Saka',
-  },
-  {
-    id: 2,
-    name: 'Jadon Sancho'
-  }
-]
-
-const MainSection = ({ totalPeers, localStream, remoteStream }) => {
+const MainSection = ({ peers, localStream }) => {
   const FRAME_WIDTH = windowWidth - 48
+  const userId = useSelector(selectUserId)
 
   const SinglePersonFrame = ({ item }) => {
     return (
@@ -31,27 +23,19 @@ const MainSection = ({ totalPeers, localStream, remoteStream }) => {
         ]}
       >
         {
-          localStream != undefined && item.id == 1 ?
+          item.remoteStream != undefined ?
           <RTCView
             mirror={false}
             objectFit={'cover'}
             style={styles.frameContent}
-            streamURL={localStream?.toURL()}
-          /> : null
-        }
-
-        {
-          remoteStream != undefined && item.id == 2 ?
-          <RTCView
-            mirror={false}
-            objectFit={'cover'}
-            style={styles.frameContent}
-            streamURL={remoteStream?.toURL()}
-          /> : null
+            streamURL={item.remoteStream?.toURL()}
+          />
+          :
+          <ActivityIndicator size='large' color={'black'} style={{alignSelf: 'center'}}/>
         }
 
         <View style={styles.frameInfoRow}>
-          <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.name}</Text>
+          <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
 
           {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
         </View>
@@ -66,8 +50,16 @@ const MainSection = ({ totalPeers, localStream, remoteStream }) => {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
+        <SinglePersonFrame
+          key={'local'}
+          item={{
+            id: userId,
+            remoteStream: localStream
+          }}
+        />
+
         {
-          TEMP.map((item) => {
+          peers.map((item) => {
             return (
               <SinglePersonFrame key={item.id} item={item}/>
             )

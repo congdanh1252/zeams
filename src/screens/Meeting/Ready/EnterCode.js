@@ -28,10 +28,11 @@ export const EnterCode = ({route, navigation}) => {
     navigation.goBack()
   }
 
-  const navigateReadyScreen = () => {
+  const navigateReadyScreen = (roomRef) => {
     navigation.navigate('JoinMeeting', {
       action: 'join',
-      roomId: roomCode
+      roomId: roomCode,
+      roomRef: roomRef
     })
   }
 
@@ -44,7 +45,7 @@ export const EnterCode = ({route, navigation}) => {
         querySnapshot.forEach(documentSnapshot => {
           if (documentSnapshot.data()?.roomId == roomCode) {
             exist = true
-            navigateReadyScreen()
+            navigateReadyScreen(documentSnapshot.id)
             return
           }
         })

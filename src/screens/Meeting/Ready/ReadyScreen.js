@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import firestore from '@react-native-firebase/firestore'
 import Clipboard from '@react-native-clipboard/clipboard'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { RTCView, mediaDevices } from 'react-native-webrtc'
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Alert, ActivityIndicator } from 'react-native'
 
 import COLOR from '../../../theme'
 import BackButton from '../../../components/BackButton'
@@ -17,7 +18,9 @@ const mediaConstraints = {
 }
 
 export const JoinMeeting = ({ navigation, route }) => {
-  const { action, roomId } = route?.params
+  const { action, roomId, roomRef } = route?.params
+  const [enableJoin, setEnableJoin] = useState(false)
+  const [totalPeople, setTotalPeople] = useState(1)
   const [isMicEnable, setIsMicEnable] = useState(true)
   const [isCamEnable, setIsCamEnable] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
@@ -65,7 +68,8 @@ export const JoinMeeting = ({ navigation, route }) => {
     navigation.navigate(
       'MeetingScreen', {
         action: action,
-        roomId: roomId
+        roomId: roomId,
+        roomRef: roomRef || ''
       }
     )
   }
@@ -91,6 +95,33 @@ export const JoinMeeting = ({ navigation, route }) => {
     gettingVideoStream()
   }, [])
 
+  // fetch total participants
+  useEffect(() => {
+    let listener = undefined
+    
+    if (action == 'join') {
+      listener = firestore().collection('rooms')
+      .doc(roomRef)
+      .onSnapshot(snapshot => {
+        if (snapshot.exists) {
+          const num = snapshot.data()?.participants?.length || 1
+          setTotalPeople(num)
+        }
+      })
+    }
+
+    return () => listener ? listener() : null
+  }, [])
+
+  // enable join button
+  useEffect(() => {
+    const preventPress = setTimeout(() => {
+      setEnableJoin(true)
+    }, 8500)
+
+    return () => clearTimeout(preventPress)
+  }, [])
+
   return (
     <View style={styles.container}>
       <BackButton onPress={goBack}/>
@@ -109,18 +140,21 @@ export const JoinMeeting = ({ navigation, route }) => {
           </Text>
         )}
       </Pressable>
-
-      {localMediaStream != undefined ? (
-        <View style={styles.videoFrameWrapper}>
-          <RTCView
-            zOrder={50}
-            mirror={false}
-            objectFit={'cover'}
-            style={styles.videoFrame}
-            streamURL={localMediaStream.toURL()}
-          />
-        </View>
-      ) : null}
+      
+      {/* Local video stream */}
+      {
+        localMediaStream != undefined ? (
+          <View style={styles.videoFrameWrapper}>
+            <RTCView
+              zOrder={50}
+              mirror={false}
+              objectFit={'cover'}
+              style={styles.videoFrame}
+              streamURL={localMediaStream.toURL()}
+            />
+          </View>
+        ) : null
+      }
 
       <View style={styles.micCamStack}>
         <TouchableOpacity
@@ -144,25 +178,37 @@ export const JoinMeeting = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Total people */}
+      {
+        action == 'join' ?
+        <Text style={[styles.grayText, styles.totalPeopleText]}>{totalPeople} people in already</Text>
+        : null
+      }
+
       <View
         style={{
           width: '100%',
           alignItems: 'center',
           justifyContent: 'center',
-        }}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handleJoiningMeet}
-          style={[styles.button, styles.blackButton]}
-        >
-          <Ionicons
-            style={{marginRight: 8}}
-            size={20}
-            name="videocam-outline"
-            color={COLOR.white}
-          />
-          <Text style={styles.whiteText}>{action == 'join' ? 'Join' : 'Create'}</Text>
-        </TouchableOpacity>
+        }}
+      >
+        {
+          enableJoin ?
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleJoiningMeet}
+            style={[styles.button, styles.blackButton]}
+          >
+            <Ionicons
+              style={{marginRight: 8}}
+              size={20}
+              name="videocam-outline"
+              color={COLOR.white}
+            />
+            <Text style={styles.whiteText}>{action == 'join' ? 'Join' : 'Create'}</Text>
+          </TouchableOpacity>
+          : <ActivityIndicator style={styles.indicator} size={'large'} color={'black'}/>
+        }
         <Text style={styles.blackText}>Continue as</Text>
         <Text style={[styles.userText, styles.blackText]}>tngcdng@gmail.com</Text>
       </View>
@@ -189,13 +235,23 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     borderWidth: 2,
-    marginVertical: 20,
+    marginVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   blackButton: {
     backgroundColor: COLOR.black,
+  },
+  grayText: {
+    opacity: 0.6,
+    color: COLOR.black
+  },
+  totalPeopleText: {
+    marginTop: 12,
+    width: '52%',
+    textAlign: 'center',
+    fontStyle: 'italic'
   },
   blackText: {
     color: '#000',
@@ -213,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   videoFrameWrapper: {
-    width: '50%',
+    width: '56%',
     height: '50%',
     borderRadius: 20,
     marginVertical: 20,
@@ -232,5 +288,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 20,
     borderColor: COLOR.black,
+  },
+  indicator: {
+    marginVertical: 16
   }
 })
