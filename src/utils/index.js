@@ -17,4 +17,21 @@ const generateRoomId = () => {
   return result
 }
 
-export { connection, generateRoomId }
+const convertCodeToDisplay = (code) => {
+  let result = '';
+  [...code].forEach((char, index) => {
+    if (index == 2) {
+      result += char + '-'
+    } else {
+      result += char
+    }
+  })
+
+  return result
+}
+
+export {
+  connection,
+  generateRoomId,
+  convertCodeToDisplay
+}

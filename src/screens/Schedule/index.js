@@ -95,9 +95,9 @@ const renderItem = ({ item }) => {
                 <Text style={styles.blackText}>Start</Text>
               </TouchableOpacity>
 
-              <Text style={[styles.grayText, styles.meetingId]}>
+              {/* <Text style={[styles.grayText, styles.meetingId]}>
                 ID: {card.id}
-              </Text>
+              </Text> */}
             </View>
           )
         })
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     marginBottom: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     backgroundColor: COLOR.white,
     marginTop: statusBarHeight,
   },

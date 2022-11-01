@@ -1,3 +1,4 @@
+import { useSelector } from 'react-redux'
 import React, { useState, useEffect } from 'react'
 import firestore from '@react-native-firebase/firestore'
 import Clipboard from '@react-native-clipboard/clipboard'
@@ -6,7 +7,9 @@ import { RTCView, mediaDevices } from 'react-native-webrtc'
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, Alert, ActivityIndicator } from 'react-native'
 
 import COLOR from '../../../theme'
+import { convertCodeToDisplay } from '../../../utils'
 import BackButton from '../../../components/BackButton'
+import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 
 const isVoiceOnly = false
 const mediaConstraints = {
@@ -19,6 +22,7 @@ const mediaConstraints = {
 
 export const JoinMeeting = ({ navigation, route }) => {
   const { action, roomId, roomRef } = route?.params
+  const userId = useSelector(selectUserId)
   const [enableJoin, setEnableJoin] = useState(false)
   const [totalPeople, setTotalPeople] = useState(1)
   const [isMicEnable, setIsMicEnable] = useState(true)
@@ -39,19 +43,6 @@ export const JoinMeeting = ({ navigation, route }) => {
         { text: "OK" }
       ]
     )
-  }
-
-  const convertCodeToDisplay = (code) => {
-    let result = '';
-    [...code].forEach((char, index) => {
-      if (index == 2) {
-        result += char + '-'
-      } else {
-        result += char
-      }
-    })
-
-    return result
   }
 
   const handleJoiningMeet = () => {
@@ -117,7 +108,7 @@ export const JoinMeeting = ({ navigation, route }) => {
   useEffect(() => {
     const preventPress = setTimeout(() => {
       setEnableJoin(true)
-    }, 8500)
+    }, 12000)
 
     return () => clearTimeout(preventPress)
   }, [])
@@ -210,7 +201,7 @@ export const JoinMeeting = ({ navigation, route }) => {
           : <ActivityIndicator style={styles.indicator} size={'large'} color={'black'}/>
         }
         <Text style={styles.blackText}>Continue as</Text>
-        <Text style={[styles.userText, styles.blackText]}>tngcdng@gmail.com</Text>
+        <Text style={[styles.userText, styles.blackText]}>{userId}</Text>
       </View>
     </View>
   )
@@ -261,6 +252,7 @@ const styles = StyleSheet.create({
   },
   userText: {
     fontSize: 19,
+    textAlign: 'center',
     fontWeight: 'bold',
   },
   videoFrame: {

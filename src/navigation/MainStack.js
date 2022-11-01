@@ -16,8 +16,23 @@ const MainStack = () => {
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="HomeStack" component={BottomTabs} options={{headerShown: false, orientation: 'portrait'}}/>
-        <Stack.Screen name="MeetingStack" component={MeetingStack} options={{headerShown: false, orientation: 'portrait'}}/>
+        <Stack.Screen
+          name="HomeStack"
+          component={BottomTabs}
+          options={{
+            headerShown: false,
+            orientation: 'portrait',
+            animation : 'fade'
+          }}
+        />
+        <Stack.Screen
+          name="MeetingStack"
+          component={MeetingStack}
+          options={{
+            headerShown: false,
+            orientation: 'portrait'
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   )
