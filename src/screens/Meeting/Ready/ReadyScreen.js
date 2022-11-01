@@ -108,7 +108,7 @@ export const JoinMeeting = ({ navigation, route }) => {
   useEffect(() => {
     const preventPress = setTimeout(() => {
       setEnableJoin(true)
-    }, 12000)
+    }, 15000)
 
     return () => clearTimeout(preventPress)
   }, [])
