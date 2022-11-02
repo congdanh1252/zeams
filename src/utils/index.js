@@ -1,4 +1,6 @@
 import io from 'socket.io-client'
+import notifee, { AndroidImportance } from '@notifee/react-native'
+
 import { SERVER_URL } from '../constants'
 
 const connection = io(SERVER_URL, {transports: ['websocket']})
@@ -29,9 +31,33 @@ const convertCodeToDisplay = (code) => {
 
   return result
 }
+  
+const createNotifeeChannel = async () => {
+  try {
+    const channelId = await notifee.createChannel({
+      id: 'screen_capture',
+      name: 'Screen Capture',
+      lights: false,
+      vibration: false,
+      importance: AndroidImportance.DEFAULT
+    })
+    
+    await notifee.displayNotification({
+      title: 'Screen Capture',
+      body: 'This notification will be here until you stop capturing.',
+      android: {
+        channelId,
+        asForegroundService: true
+      }
+    })
+  } catch( err ) {
+    // Handle Error
+  }
+}
 
 export {
   connection,
   generateRoomId,
-  convertCodeToDisplay
+  convertCodeToDisplay,
+  createNotifeeChannel
 }

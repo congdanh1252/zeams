@@ -6,6 +6,7 @@ import {
   mediaDevices,
 } from 'react-native-webrtc'
 import { useSelector } from 'react-redux'
+import notifee from '@notifee/react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -20,8 +21,8 @@ import COLOR from '../../../theme'
 import BottomStack from './BottomStack'
 import MainSection from './MainSection'
 import { statusBarHeight } from '../../../constants'
-import { connection, convertCodeToDisplay } from '../../../utils'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
+import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
 
 const servers = {
   iceServers: [
@@ -75,6 +76,7 @@ export const MainScreen = ({ navigation, route }) => {
   const userId = useSelector(selectUserId)
   const [muted, setMuted] = useState(false)
   const [docRef, setDocRef] = useState(roomId)
+  const [isSharing, setIsSharing] = useState(false)
   const [initialising, setInitialising] = useState(true)
   const [localMediaStream, setLocalMediaStream] = useState(undefined)
 
@@ -105,6 +107,35 @@ export const MainScreen = ({ navigation, route }) => {
     mediaDevices.getUserMedia(mediaConstraints).then(stream => {
       setLocalMediaStream(stream)
     })
+  }
+
+  const shareScreen = async () => {
+    await createNotifeeChannel()
+
+    mediaDevices.getDisplayMedia({video: true})
+    .then(stream => {
+      setIsSharing(true)
+      // setLocalMediaStream(stream)
+      otherPeers.current[0].peerConnection
+      .getSenders().forEach(sender => {
+        sender.replaceTrack(stream.getVideoTracks()[0])
+      })
+    })
+  }
+
+  const stopScreenSharing = async () => {
+    try {
+      await notifee.stopForegroundService()
+      await notifee.deleteChannel('screen_capture')
+
+      otherPeers.current[0].peerConnection
+      .getSenders().forEach(sender => {
+        sender.replaceTrack(localMediaStream.getVideoTracks()[0])
+      })
+      setIsSharing(false)
+    } catch (e) {
+
+    }
   }
 
   const switchCamera = () => {
@@ -442,6 +473,9 @@ export const MainScreen = ({ navigation, route }) => {
     connectServer()
 
     return () => {
+      if (isSharing) {
+        stopScreenSharing()
+      }
       handleCleanUpConnection('all')
     }
   }, [])
@@ -492,8 +526,11 @@ export const MainScreen = ({ navigation, route }) => {
       <BottomStack
         isMuted={muted}
         hangUp={hangUpCall}
+        isSharing={isSharing}
         toggleMute={toggleMute}
+        shareScreen={shareScreen}
         switchCamera={switchCamera}
+        stopSharing={stopScreenSharing}
       />
 
       {/* Overlay */}

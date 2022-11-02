@@ -1,7 +1,7 @@
 import React from 'react'
+import { Provider } from 'react-redux'
 import { SafeAreaView, StatusBar } from 'react-native'
 
-import { Provider } from 'react-redux'
 import { store } from './src/redux/store'
 import MainStack from './src/navigation/MainStack'
 import { MainScreen } from './src/screens/Meeting/MainScreen'

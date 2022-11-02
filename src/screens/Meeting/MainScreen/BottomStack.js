@@ -14,14 +14,22 @@ const SingleButton = ({ name, onPress, isExitButton = false }) => {
     >
       <Ionicons
         name={name}
-        color={'white'}
         size={name == 'close-outline' ? 26 : 22}
+        color={name == 'stop-circle-outline' ? 'red' : 'white'}
       />
     </TouchableHighlight>
   )
 }
 
-const BottomStack = ({ switchCamera, isMuted, toggleMute, hangUp }) => {
+const BottomStack = ({
+  isMuted,
+  isSharing,
+  switchCamera,
+  toggleMute,
+  hangUp,
+  shareScreen,
+  stopSharing
+}) => {
   const dummyFunction = () => {
 
   }
@@ -29,13 +37,13 @@ const BottomStack = ({ switchCamera, isMuted, toggleMute, hangUp }) => {
   return (
     <View style={styles.container}>
       <SingleButton
-        name={'camera-reverse-outline'}
         onPress={switchCamera}
+        name={'camera-reverse-outline'}
       />
 
       <SingleButton
-        name={isMuted ? 'mic-off-outline' : 'mic-outline'}
         onPress={toggleMute}
+        name={isMuted ? 'mic-off-outline' : 'mic-outline'}
       />
 
       <SingleButton
@@ -44,14 +52,14 @@ const BottomStack = ({ switchCamera, isMuted, toggleMute, hangUp }) => {
       />
 
       <SingleButton
-        name={'share-outline'}
-        onPress={dummyFunction}
+        onPress={isSharing ? stopSharing : shareScreen}
+        name={isSharing ? 'stop-circle-outline' : 'share-outline'}
       />
 
       <SingleButton
+        onPress={hangUp}
         isExitButton={true}
         name={'close-outline'}
-        onPress={hangUp}
       />
     </View>
   )

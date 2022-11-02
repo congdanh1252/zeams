@@ -1,12 +1,14 @@
-import React from "react"
+import React, { useState } from "react"
 import { useSelector } from "react-redux"
 import { RTCView } from "react-native-webrtc"
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native"
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from "react-native"
 
 import COLOR from "../../../theme"
 import { windowWidth } from "../../../constants"
 import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
+
+const FRAME_WIDTH = windowWidth - 48
 
 const calculateFrameSize = (total) => {
   let width = 0
@@ -34,38 +36,64 @@ const calculateFrameSize = (total) => {
 }
 
 const MainSection = ({ peers, localStream }) => {
-  const FRAME_WIDTH = windowWidth - 48
   const userId = useSelector(selectUserId)
+  const [layout, setLayout] = useState('equal')
   const SIZE = calculateFrameSize(peers.length + 1)
 
-  const SinglePersonFrame = ({ item }) => {
+  const changeFocusLayout = () => {
+    setLayout(layout == 'equal' ? 'focus' : 'equal')
+  }
+
+  const LocalFrameOnFocus = ({ item }) => {
     return (
-      <View
-        style={[
-          styles.singlePersonFrame, {
-            width: SIZE.width,
-            height: SIZE.height,
-          }
-        ]}
-      >
+      <View style={styles.myFrameOnFocus}>
         {
           item.remoteStream ?
           <RTCView
+            zOrder={2}
             mirror={false}
             objectFit={'cover'}
-            style={styles.frameContent}
             streamURL={item.remoteStream?.toURL()}
+            style={[styles.frameContent, {borderRadius: 10}]}
           />
           :
           <ActivityIndicator size='large' color={'black'} style={styles.loadingIndicator}/>
         }
-
-        <View style={[styles.frameInfoRow, {width: SIZE.width < FRAME_WIDTH ? '80%' : '34%'}]}>
-          <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
-
-          {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
-        </View>
       </View>
+    )
+  }  
+
+  const SinglePersonFrame = ({ item }) => {
+    return (
+      <TouchableWithoutFeedback onPress={changeFocusLayout}>
+        <View
+          style={[
+            styles.singlePersonFrame, {
+              width: SIZE.width,
+              height: layout == 'equal' ? SIZE.height : '93%',
+              backgroundColor: layout == 'equal' ? 'white' : 'black'
+            }
+          ]}
+        >
+          {
+            item.remoteStream ?
+            <RTCView
+              mirror={false}
+              style={styles.frameContent}
+              streamURL={item.remoteStream?.toURL()}
+              objectFit={layout == 'equal' ? 'cover' : 'contain'}
+            />
+            :
+            <ActivityIndicator size='large' color={'black'} style={styles.loadingIndicator}/>
+          }
+
+          <View style={[styles.frameInfoRow, {width: SIZE.width < FRAME_WIDTH ? '80%' : '34%'}]}>
+            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
+
+            {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     )
   }
 
@@ -77,20 +105,35 @@ const MainSection = ({ peers, localStream }) => {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        <SinglePersonFrame
-          key={'local'}
-          item={{
-            id: userId,
-            remoteStream: localStream
-          }}
-        />
+        {
+          layout == 'equal' ?
+          <SinglePersonFrame
+            key={'local'}
+            item={{
+              id: userId,
+              remoteStream: localStream
+            }}
+          /> : null
+        }
 
+        {/* remote peers */}
         {
           peers.map((item) => {
             return (
               <SinglePersonFrame key={item.id} item={item}/>
             )
           })
+        }
+
+        {
+          layout == 'focus' ?
+          <LocalFrameOnFocus
+            key={'local'}
+            item={{
+              id: userId,
+              remoteStream: localStream
+            }}
+          /> : null
         }
       </View>
     </ScrollView>
@@ -115,13 +158,14 @@ const styles = StyleSheet.create({
     marginTop: 12
   },
   singlePersonFrame: {
-    borderWidth: 1,
+    zIndex: 1,
+    borderWidth: 0,
     borderRadius: 24,
     marginVertical: 16,
     overflow: 'hidden',
     marginHorizontal: 12,
     borderColor: COLOR.gray,
-    backgroundColor: 'white'
+    backgroundColor: 'white',
   },
   frameContent: {
     flex: 1,
@@ -148,5 +192,18 @@ const styles = StyleSheet.create({
   },
   loadingIndicator: {
     marginTop: '35%'
+  },
+  myFrameOnFocus: {
+    top: 34,
+    right: 40,
+    zIndex: 2,
+    width: '19%',
+    height: '19%',
+    borderWidth: 0,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'absolute',
+    borderColor: COLOR.gray,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)'
   }
 })
