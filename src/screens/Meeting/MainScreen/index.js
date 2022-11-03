@@ -115,10 +115,12 @@ export const MainScreen = ({ navigation, route }) => {
     mediaDevices.getDisplayMedia({video: true})
     .then(stream => {
       setIsSharing(true)
-      // setLocalMediaStream(stream)
-      otherPeers.current[0].peerConnection
-      .getSenders().forEach(sender => {
-        sender.replaceTrack(stream.getVideoTracks()[0])
+
+      otherPeers.current.forEach(peer => {
+        peer.peerConnection
+        .getSenders().forEach(sender => {
+          sender.replaceTrack(stream.getVideoTracks()[0])
+        })
       })
     })
   }
@@ -128,10 +130,13 @@ export const MainScreen = ({ navigation, route }) => {
       await notifee.stopForegroundService()
       await notifee.deleteChannel('screen_capture')
 
-      otherPeers.current[0].peerConnection
-      .getSenders().forEach(sender => {
-        sender.replaceTrack(localMediaStream.getVideoTracks()[0])
+      otherPeers.current.forEach(peer => {
+        peer.peerConnection
+        .getSenders().forEach(sender => {
+          sender.replaceTrack(localMediaStream.getVideoTracks()[0])
+        })
       })
+      
       setIsSharing(false)
     } catch (e) {
 
@@ -302,7 +307,7 @@ export const MainScreen = ({ navigation, route }) => {
 
               if (!otherPeers.current[index].peerConnection) {
                 createPeerConnection(index)
-              }
+              } 
 
               if (obj.data != otherPeers.current[index].peerConnection?.localDescription) {
                 if (otherPeers.current[index].peerConnection.signalingState != 'stable') {
@@ -382,7 +387,7 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const createPeerConnection = (index) => {
-    if (!otherPeers.current[index].peerConnection || otherPeers.current[index].peerConnection == undefined) {
+    if (!otherPeers.current[index].peerConnection) {
       otherPeers.current[index].peerConnection = new RTCPeerConnection(servers)
 
       mediaDevices.getUserMedia(mediaConstraints)
@@ -505,8 +510,8 @@ export const MainScreen = ({ navigation, route }) => {
   }, [])
 
   //1st joiner lose 2 streams
-  //2nd joiner lose 1st's stream
-  //3rd joiner get 2 streams
+  //2nd joiner lose 1st's stream [v]
+  //3rd joiner get 2 streams [v]
 
   return (
     <View style={styles.container}>
