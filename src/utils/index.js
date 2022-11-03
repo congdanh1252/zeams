@@ -38,7 +38,7 @@ const createNotifeeChannel = async () => {
       id: 'screen_capture',
       name: 'Screen Capture',
       lights: false,
-      vibration: false,
+      vibration: true,
       importance: AndroidImportance.DEFAULT
     })
     
@@ -47,7 +47,7 @@ const createNotifeeChannel = async () => {
       body: 'This notification will be here until you stop capturing.',
       android: {
         channelId,
-        asForegroundService: true
+        asForegroundService: true,
       }
     })
   } catch( err ) {

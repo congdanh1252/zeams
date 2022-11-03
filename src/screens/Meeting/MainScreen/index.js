@@ -5,24 +5,18 @@ import {
   MediaStream,
   mediaDevices,
 } from 'react-native-webrtc'
-import { useSelector } from 'react-redux'
 import notifee from '@notifee/react-native'
+import { useDispatch, useSelector } from 'react-redux'
 import React, { useEffect, useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  BackHandler,
-} from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native'
 
 import COLOR from '../../../theme'
 import BottomStack from './BottomStack'
-import MainSection from './MainSection'
+import PeerSection from './PeerSection'
 import { statusBarHeight } from '../../../constants'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
+import { selectLocalStream, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
 
 const servers = {
   iceServers: [
@@ -71,23 +65,22 @@ const sessionConstraints = {
 
 export const MainScreen = ({ navigation, route }) => {
   const { action, roomId, roomRef } = route?.params
+  const dispatch = useDispatch()
   const otherPeers = useRef([])
   const [others, setOthers] = useState([])
   const userId = useSelector(selectUserId)
   const [muted, setMuted] = useState(false)
   const [docRef, setDocRef] = useState(roomId)
   const [isSharing, setIsSharing] = useState(false)
+  const localStream = useSelector(selectLocalStream)
   const [initialising, setInitialising] = useState(true)
-  const [localMediaStream, setLocalMediaStream] = useState(undefined)
 
   const deepClonePeers = () => {
-    let result = []
-    const clone = [...otherPeers.current]
-    clone.forEach(peer => {
-      result.push(Object.assign({}, peer))
-    })
-
-    setOthers(result)
+    dispatch(
+      updateOtherPeers({
+        otherPeers: [...otherPeers.current]
+      })
+    )
   }
 
   const findOfferIndex = (msg) => {
@@ -105,7 +98,7 @@ export const MainScreen = ({ navigation, route }) => {
 
   const preLoadLocalStream = () => {
     mediaDevices.getUserMedia(mediaConstraints).then(stream => {
-      setLocalMediaStream(stream)
+      dispatch(updateLocalStream({ localStream: stream }))
     })
   }
 
@@ -133,7 +126,7 @@ export const MainScreen = ({ navigation, route }) => {
       otherPeers.current.forEach(peer => {
         peer.peerConnection
         .getSenders().forEach(sender => {
-          sender.replaceTrack(localMediaStream.getVideoTracks()[0])
+          sender.replaceTrack(localStream.getVideoTracks()[0])
         })
       })
       
@@ -144,13 +137,13 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const switchCamera = () => {
-    if (localMediaStream && localMediaStream != undefined) {
-      localMediaStream?.getVideoTracks().forEach(track => track._switchCamera())
+    if (localStream) {
+      localStream?.getVideoTracks().forEach(track => track._switchCamera())
     }
   }
 
   const toggleMute = () => {
-    localMediaStream?.getAudioTracks().forEach(track => {
+    localStream?.getAudioTracks().forEach(track => {
       track.enabled = !track.enabled
     })
     setMuted(!muted)
@@ -186,8 +179,8 @@ export const MainScreen = ({ navigation, route }) => {
         //   item.peerConnection = null
         // })
 
-        if (localMediaStream) {
-          localMediaStream.getTracks().map(track => {
+        if (localStream) {
+          localStream.getTracks().map(track => {
             track.stop()
           })
         }
@@ -198,7 +191,7 @@ export const MainScreen = ({ navigation, route }) => {
         connection.close()
         setOthers([])
         otherPeers.current = []
-        setLocalMediaStream(undefined)
+        dispatch(updateLocalStream({ localStream: undefined }))
         console.log('-------Clean up connection------')
       }
     } else {
@@ -226,8 +219,8 @@ export const MainScreen = ({ navigation, route }) => {
       // others[which]?.peerConnection?.close()
       // others[which].peerConnection = undefined
 
-      if (localMediaStream) {
-        localMediaStream.getTracks().map(track => {
+      if (localStream) {
+        localStream.getTracks().map(track => {
           track.stop()
         })
       }
@@ -235,10 +228,10 @@ export const MainScreen = ({ navigation, route }) => {
       otherPeers.current.splice(which, 1)
       deepClonePeers()
     }
+    deepClonePeers()
   }
 
   const hangUpCall = () => {
-    console.log('Room ref: ' + docRef)
     sendToServer({
       type: 'hang-up',
       roomId: roomId,
@@ -392,9 +385,19 @@ export const MainScreen = ({ navigation, route }) => {
 
       mediaDevices.getUserMedia(mediaConstraints)
       .then(stream => {
-        setLocalMediaStream(stream)
+        dispatch(updateLocalStream({ localStream: stream }))
         stream?.getTracks().forEach(track => {
           otherPeers.current[index].peerConnection.addTrack(track)
+        })
+
+        // replace old tracks in other peers with latest tracks
+        otherPeers.current.forEach((peer, idx) => {
+          if (idx != index && peer.peerConnection) {
+            console.log('REPLACE TRACK')
+            peer.peerConnection.getSenders().forEach(sender => {
+              sender.replaceTrack(stream.getVideoTracks()[0])
+            })
+          }
         })
       })
 
@@ -509,16 +512,9 @@ export const MainScreen = ({ navigation, route }) => {
     return () => backHandler.remove()
   }, [])
 
-  //1st joiner lose 2 streams
-  //2nd joiner lose 1st's stream [v]
-  //3rd joiner get 2 streams [v]
-
   return (
     <View style={styles.container}>
-      <MainSection
-        peers={others}
-        localStream={localMediaStream}
-      />
+      <PeerSection />
 
       {/* Code */}
       <TouchableOpacity

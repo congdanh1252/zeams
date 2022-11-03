@@ -2,7 +2,6 @@ import React from "react"
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { StyleSheet, TouchableHighlight, View } from "react-native"
 
-import COLOR from "../../../theme"
 import { windowWidth } from "../../../constants"
 
 const SingleButton = ({ name, onPress, isExitButton = false }) => {
@@ -22,13 +21,13 @@ const SingleButton = ({ name, onPress, isExitButton = false }) => {
 }
 
 const BottomStack = ({
+  hangUp,
   isMuted,
   isSharing,
-  switchCamera,
   toggleMute,
-  hangUp,
   shareScreen,
-  stopSharing
+  stopSharing,
+  switchCamera
 }) => {
   const dummyFunction = () => {
 
@@ -47,8 +46,8 @@ const BottomStack = ({
       />
 
       <SingleButton
-        name={'chatbox-outline'}
         onPress={dummyFunction}
+        name={'chatbox-outline'}
       />
 
       <SingleButton
@@ -65,7 +64,7 @@ const BottomStack = ({
   )
 }
 
-export default BottomStack
+export default React.memo(BottomStack)
 
 const styles = StyleSheet.create({
   container: {
