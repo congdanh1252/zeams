@@ -13,7 +13,7 @@ const FRAME_WIDTH = windowWidth - 54
 
 const TwoPeerLayout = () => {
   const userId = useSelector(selectUserId)
-  const peers = useSelector(selectOtherPeers)
+  const peers = [{id: '1', remoteStream: undefined}]//useSelector(selectOtherPeers)
   const localStream = useSelector(selectLocalStream)
   const [focusIndex, setFocusIndex] = useState(-1)
 
@@ -45,7 +45,9 @@ const TwoPeerLayout = () => {
           }
 
           <View style={styles.frameInfoRow}>
-            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
+            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>
+              {item.id == userId ? 'YOU' : item.id}
+            </Text>
 
             {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
           </View>
@@ -147,7 +149,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     overflow: 'hidden',
     marginHorizontal: 12,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   frameContent: {

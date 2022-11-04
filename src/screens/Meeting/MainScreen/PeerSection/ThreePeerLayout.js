@@ -42,7 +42,9 @@ const ThreePeerLayout = () => {
           }
 
           <View style={styles.frameInfoRow}>
-            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
+            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>
+              {item.id == userId ? 'YOU' : item.id}
+            </Text>
 
             {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
           </View>
@@ -72,7 +74,9 @@ const ThreePeerLayout = () => {
           }
 
           <View style={styles.frameInfoRow}>
-            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
+            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>
+              {item.id == userId ? 'YOU' : item.id}
+            </Text>
 
             {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
           </View>

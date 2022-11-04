@@ -11,12 +11,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native'
 
 import COLOR from '../../../theme'
+import { ChatBox } from './ChatBox'
 import BottomStack from './BottomStack'
 import PeerSection from './PeerSection'
 import { statusBarHeight } from '../../../constants'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
-import { selectLocalStream, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
+import { selectChatMessages, selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
 
 const servers = {
   iceServers: [
@@ -67,12 +68,13 @@ export const MainScreen = ({ navigation, route }) => {
   const { action, roomId, roomRef } = route?.params
   const dispatch = useDispatch()
   const otherPeers = useRef([])
-  const [others, setOthers] = useState([])
   const userId = useSelector(selectUserId)
   const [muted, setMuted] = useState(false)
   const [docRef, setDocRef] = useState(roomId)
+  const [showChat, setShowChat] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
   const localStream = useSelector(selectLocalStream)
+  const chatMessages = useSelector(selectChatMessages)
   const [initialising, setInitialising] = useState(true)
 
   const deepClonePeers = () => {
@@ -98,7 +100,9 @@ export const MainScreen = ({ navigation, route }) => {
 
   const preLoadLocalStream = () => {
     mediaDevices.getUserMedia(mediaConstraints).then(stream => {
-      dispatch(updateLocalStream({ localStream: stream }))
+      dispatch(
+        updateLocalStream({ localStream: stream })
+      )
     })
   }
 
@@ -149,6 +153,10 @@ export const MainScreen = ({ navigation, route }) => {
     setMuted(!muted)
   }
 
+  const toggleChatBox = () => {
+    setShowChat(!showChat)
+  }
+
   const handleCleanUpConnection = (which) => {
     if (which == 'all') {
       if (otherPeers.current.length > 0) {
@@ -189,7 +197,6 @@ export const MainScreen = ({ navigation, route }) => {
         connection.removeAllListeners()
         connection.disconnect()
         connection.close()
-        setOthers([])
         otherPeers.current = []
         dispatch(updateLocalStream({ localStream: undefined }))
         console.log('-------Clean up connection------')
@@ -365,6 +372,25 @@ export const MainScreen = ({ navigation, route }) => {
             }
           } catch (err) {}
           break
+        case 'chat':
+          if (obj.roomId == roomId) {
+            let currentMsgList = [...chatMessages]
+            console.log("BEFORE: " + currentMsgList?.length)
+            currentMsgList.push({
+              id: currentMsgList.length,
+              sender: obj.sender,
+              content: obj.content,
+              contentType: obj.contentType,
+              createdAt: obj.createdAt
+            })
+            console.log("AFTER: " + currentMsgList?.length)
+            currentMsgList = currentMsgList.sort((a, b) => {return a.createdAt - b.createdAt})
+
+            dispatch(
+              updateChatMessages({ chatMessages: currentMsgList })
+            )
+          }
+          break
         case 'hang-up':
           const index = findOfferIndex(obj)
           handleCleanUpConnection(index)
@@ -385,7 +411,9 @@ export const MainScreen = ({ navigation, route }) => {
 
       mediaDevices.getUserMedia(mediaConstraints)
       .then(stream => {
-        dispatch(updateLocalStream({ localStream: stream }))
+        dispatch(
+          updateLocalStream({ localStream: stream })
+        )
         stream?.getTracks().forEach(track => {
           otherPeers.current[index].peerConnection.addTrack(track)
         })
@@ -393,7 +421,6 @@ export const MainScreen = ({ navigation, route }) => {
         // replace old tracks in other peers with latest tracks
         otherPeers.current.forEach((peer, idx) => {
           if (idx != index && peer.peerConnection) {
-            console.log('REPLACE TRACK')
             peer.peerConnection.getSenders().forEach(sender => {
               sender.replaceTrack(stream.getVideoTracks()[0])
             })
@@ -530,9 +557,14 @@ export const MainScreen = ({ navigation, route }) => {
         isSharing={isSharing}
         toggleMute={toggleMute}
         shareScreen={shareScreen}
+        openChatBox={toggleChatBox}
         switchCamera={switchCamera}
         stopSharing={stopScreenSharing}
       />
+
+      {
+        showChat && <ChatBox roomId={roomId} closeCallback={toggleChatBox} sendMsgCallback={sendToServer}/>
+      }
 
       {/* Overlay */}
       {initialising ? (
