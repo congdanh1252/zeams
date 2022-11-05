@@ -13,7 +13,7 @@ const FRAME_WIDTH = windowWidth - 54
 
 const TwoPeerLayout = () => {
   const userId = useSelector(selectUserId)
-  const peers = [{id: '1', remoteStream: undefined}]//useSelector(selectOtherPeers)
+  const peers = useSelector(selectOtherPeers)
   const localStream = useSelector(selectLocalStream)
   const [focusIndex, setFocusIndex] = useState(-1)
 
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     overflow: 'hidden',
     marginHorizontal: 12,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   frameContent: {

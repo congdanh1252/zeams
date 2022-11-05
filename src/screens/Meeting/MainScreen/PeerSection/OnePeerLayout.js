@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: 12,
     borderColor: COLOR.gray,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
   },
   frameContent: {
     flex: 1,
