@@ -17,7 +17,7 @@ import PeerSection from './PeerSection'
 import { statusBarHeight } from '../../../constants'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
-import { selectChatMessages, selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
+import { selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
 
 const servers = {
   iceServers: [
@@ -72,9 +72,9 @@ export const MainScreen = ({ navigation, route }) => {
   const [muted, setMuted] = useState(false)
   const [docRef, setDocRef] = useState(roomId)
   const [showChat, setShowChat] = useState(false)
+  const [hasNewMsg, setHasNewMsg] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
   const localStream = useSelector(selectLocalStream)
-  const chatMessages = useSelector(selectChatMessages)
   const [initialising, setInitialising] = useState(true)
 
   const deepClonePeers = () => {
@@ -154,6 +154,9 @@ export const MainScreen = ({ navigation, route }) => {
   }
 
   const toggleChatBox = () => {
+    if (!showChat) {
+      setHasNewMsg(false)
+    }
     setShowChat(!showChat)
   }
 
@@ -374,21 +377,21 @@ export const MainScreen = ({ navigation, route }) => {
           break
         case 'chat':
           if (obj.roomId == roomId) {
-            let currentMsgList = [...chatMessages]
-            console.log("BEFORE: " + currentMsgList?.length)
-            currentMsgList.push({
-              id: currentMsgList.length,
+            let newMessage = {
+              id: obj.createdAt,
               sender: obj.sender,
               content: obj.content,
               contentType: obj.contentType,
               createdAt: obj.createdAt
-            })
-            console.log("AFTER: " + currentMsgList?.length)
-            currentMsgList = currentMsgList.sort((a, b) => {return a.createdAt - b.createdAt})
+            }
 
             dispatch(
-              updateChatMessages({ chatMessages: currentMsgList })
+              updateChatMessages({ newMessage: newMessage })
             )
+
+            if (showChat == false) {
+              setHasNewMsg(true)
+            }
           }
           break
         case 'hang-up':
@@ -557,6 +560,7 @@ export const MainScreen = ({ navigation, route }) => {
         isSharing={isSharing}
         toggleMute={toggleMute}
         shareScreen={shareScreen}
+        showChatBadge={hasNewMsg}
         openChatBox={toggleChatBox}
         switchCamera={switchCamera}
         stopSharing={stopScreenSharing}

@@ -17,7 +17,7 @@ export const connectionSlice = createSlice({
       state.otherPeers = action.payload.otherPeers
     },
     updateChatMessages: (state, action) => {
-      state.chatMessages = action.payload.chatMessages
+      state.chatMessages = [action.payload.newMessage, ...state.chatMessages]
     }
   },
 })

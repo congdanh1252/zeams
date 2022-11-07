@@ -2,107 +2,12 @@ import { useSelector } from "react-redux"
 import React, { useMemo, useRef, useState } from "react"
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import BottomSheet, { BottomSheetFlatList } from "@gorhom/bottom-sheet"
-import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 
 import COLOR from "../../../theme"
 import { statusBarHeight, windowWidth } from "../../../constants"
 import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
 import { selectChatMessages } from "../../../redux/slices/ConnectionSlice"
-
-const MESSAGES = [
-  {
-    id: '0',
-    roomId: 'r',
-    sender: '1',
-    content: 'Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '1',
-    roomId: 'r',
-    sender: 'hello',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-  {
-    id: '3',
-    roomId: 'r',
-    sender: '1',
-    content: 'Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '4',
-    roomId: 'r',
-    sender: '1',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-  {
-    id: '5',
-    roomId: 'r',
-    sender: 'hello',
-    content: 'Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '6',
-    roomId: 'r',
-    sender: '1',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-
-  {
-    id: '10',
-    roomId: 'r',
-    sender: 'hello',
-    content: 'Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '11',
-    roomId: 'r',
-    sender: '1',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-  {
-    id: '13',
-    roomId: 'r',
-    sender: '1',
-    content: 'Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '14',
-    roomId: 'r',
-    sender: '1',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-  {
-    id: '15',
-    roomId: 'r',
-    sender: '1',
-    content: 'Hi! How are you guys?',
-    createdAt: '',
-  },
-  {
-    id: '16',
-    roomId: 'r',
-    sender: '1',
-    content: 'So good to see you!',
-    createdAt: '',
-  },
-  {
-    id: '100',
-    roomId: 'r',
-    sender: '1',
-    content: 'Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys? Hi! How are you guys?',
-    createdAt: '',
-  },
-].reverse() //sort by latest time asc 
 
 export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const sheetRef = useRef(null)
@@ -126,8 +31,12 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
             source={{uri: 'https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png'}}
           />
 
-          <View style={styles.peerMsgContentHolder}>
-            <Text style={styles.blackText}>{item.content}</Text>
+          <View style={styles.withNameContainer}>
+            <Text style={styles.peerName}>{item.sender}</Text>
+
+            <View style={styles.peerMsgContentHolder}>
+              <Text style={styles.blackText}>{item.content}</Text>
+            </View>
           </View>
         </View>
       )
@@ -248,6 +157,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
+  withNameContainer: {
+    backgroundColor: 'white'
+  },
   peerMessage: {
     marginVertical: 6,
     flexDirection: 'row',
@@ -269,8 +181,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignSelf: 'flex-end',
     alignItems: 'flex-end',
-    maxWidth: windowWidth - 82,
     backgroundColor: '#000',
+    maxWidth: windowWidth - 82,
   },
   title: {
     fontSize: 16,
@@ -326,9 +238,16 @@ const styles = StyleSheet.create({
   whiteText: {
     color: 'white',
   },
+  peerName: {
+    fontSize: 12,
+    color: 'gray',
+    marginLeft: 4,
+    marginBottom: 4,
+  },
   user_photo: {
     width: 26,
     height: 26,
+    marginTop: 16,
     marginRight: 10,
     borderRadius: 13,
   },
