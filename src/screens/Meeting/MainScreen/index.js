@@ -127,7 +127,7 @@ export const MainScreen = ({ navigation, route }) => {
       await notifee.stopForegroundService()
       await notifee.deleteChannel('screen_capture')
 
-      otherPeers.current.forEach(peer => {
+      otherPeers.current?.forEach(peer => {
         peer.peerConnection
         .getSenders().forEach(sender => {
           sender.replaceTrack(localStream.getVideoTracks()[0])
@@ -238,6 +238,7 @@ export const MainScreen = ({ navigation, route }) => {
       otherPeers.current.splice(which, 1)
       deepClonePeers()
     }
+    stopScreenSharing()
     deepClonePeers()
   }
 
@@ -391,6 +392,10 @@ export const MainScreen = ({ navigation, route }) => {
 
             if (showChat == false) {
               setHasNewMsg(true)
+            } else {
+              if (hasNewMsg) {
+                setHasNewMsg(false)
+              }
             }
           }
           break

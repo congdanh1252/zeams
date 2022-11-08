@@ -1,18 +1,27 @@
+import RNFS from 'react-native-fs'
+import DocumentPicker, {
+  DirectoryPickerResponse,
+  DocumentPickerResponse,
+  isInProgress,
+  types,
+} from 'react-native-document-picker'
 import { useSelector } from "react-redux"
 import React, { useMemo, useRef, useState } from "react"
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import BottomSheet, { BottomSheetFlatList } from "@gorhom/bottom-sheet"
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Image, NativeModules, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 
 import COLOR from "../../../theme"
-import { statusBarHeight, windowWidth } from "../../../constants"
+import { DOC_ICON, PDF_ICON } from '../../../assets'
 import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
 import { selectChatMessages } from "../../../redux/slices/ConnectionSlice"
+import { statusBarHeight, windowHeight, windowWidth } from "../../../constants"
 
 export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const sheetRef = useRef(null)
   const [draft, setDraft] = useState('')
   const userId = useSelector(selectUserId)
+  const [file, setFile] = useState(undefined)
   const chatMessages = useSelector(selectChatMessages)
 
   const snapPoints = useMemo(() => ["100%"], [])
@@ -50,10 +59,48 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
         sender: userId,
         content: draft,
         roomId: roomId,
+        contentType: 'text',
         createdAt: new Date().getTime(),
-        contentType: draft != '' ? 'text' : 'file'
       })
       setDraft('')
+    } else {
+      if (file) {
+        getFileAsBase64()
+        .then(res => {
+          sendMsgCallback({
+            type: 'chat',
+            sender: userId,
+            content: res.replace(/^data:image\/\w+;base64,/, ''),
+            roomId: roomId,
+            contentType: 'file',
+            createdAt: new Date().getTime(),
+          })
+          console.log('done send file to server')
+          setFile(undefined)
+        })
+      }
+    }
+  }
+
+  const getFileAsBase64 = () => {
+    return RNFS.readFile(file?.uri, 'base64')
+  }
+
+  const pickFile = () => {
+    try {
+      DocumentPicker.pickSingle({
+        presentationStyle: 'formSheet',
+        type: [types.doc, types.docx, types.pdf, types.images]
+      })
+      .then(result => {
+        console.log(result)
+        setFile(result)
+      })
+      .catch(error => {
+        console.log(error)
+      })
+    } catch (error) {
+      
     }
   }
 
@@ -96,21 +143,60 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           />
 
           <View style={styles.bottomStack}>
-            <TouchableOpacity style={styles.addFileBtn}>
+            <TouchableOpacity
+              onPress={pickFile}
+              activeOpacity={0.5}
+              style={styles.addFileBtn}
+            >
               <Ionicons name="add-circle-outline" color={'black'} size={28}/>
             </TouchableOpacity>
 
-            <TextInput
-              value={draft}
-              multiline={true}
-              style={styles.input}
-              returnKeyType={'done'}
-              placeholder={'Type something'}
-              placeholderTextColor={'gray'}
-              onChangeText={(value) => {
-                setDraft(value)
-              }}
-            />
+            {
+              !file ? (
+                <TextInput
+                  value={draft}
+                  multiline={true}
+                  style={styles.input}
+                  returnKeyType={'done'}
+                  placeholder={'Type something'}
+                  placeholderTextColor={'gray'}
+                  onChangeText={(value) => {
+                    setDraft(value)
+                  }}
+                />
+              )
+              : (
+                <View style={styles.picked_photo_holder}>
+                  {
+                    !file?.type.includes("image") ? (
+                      <View style={styles.picked_doc}>
+                        <Image
+                          resizeMode='contain'
+                          style={styles.picked_doc_img}
+                          source={file?.type.includes("pdf") ? PDF_ICON : DOC_ICON}
+                        />
+
+                        <Text style={styles.blackText}>{file?.name}</Text>
+                      </View>
+                    ) : (
+                      <Image
+                        resizeMode='contain'
+                        source={{uri: file?.uri}}
+                        style={styles.picked_photo}
+                      />
+                    )
+                  }
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setFile(undefined)}
+                    style={styles.remove_photo_button}
+                  >
+                    <Text style={{color: '#fff', fontSize: 20}}> —</Text>
+                  </TouchableOpacity>
+                </View>
+              )
+            }
 
             <TouchableOpacity
               activeOpacity={0.7}
@@ -161,7 +247,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white'
   },
   peerMessage: {
-    marginVertical: 6,
+    marginVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -176,7 +262,7 @@ const styles = StyleSheet.create({
   },
   myMsgContentHolder: {
     borderRadius: 8,
-    marginVertical: 6,
+    marginVertical: 5,
     paddingVertical: 8,
     paddingHorizontal: 10,
     alignSelf: 'flex-end',
@@ -250,6 +336,40 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginRight: 10,
     borderRadius: 13,
+  },
+  picked_doc: {
+    width: '90%',
+    height: '100%',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  picked_doc_img: {
+    width: '80%',
+    height: '70%',
+  },
+  picked_photo: {
+    width: '90%',
+    height: '100%',
+    borderRadius: 10
+  },
+  picked_photo_holder: {
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    height: windowHeight / 4,
+    width: windowWidth - 148,
+    justifyContent: 'center',
+    backgroundColor: '#EEEEEE',
+  },
+  remove_photo_button : {
+    top: 4,
+    right: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    position: 'absolute',
+    backgroundColor: COLOR.black
   },
   overlay: {
     width: '100%',
