@@ -1,21 +1,21 @@
 import RNFS from 'react-native-fs'
-import DocumentPicker, {
-  DirectoryPickerResponse,
-  DocumentPickerResponse,
-  isInProgress,
-  types,
-} from 'react-native-document-picker'
 import { useSelector } from "react-redux"
-import React, { useMemo, useRef, useState } from "react"
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import React, { useMemo, useRef, useState, useEffect } from "react"
+import DocumentPicker, { types } from 'react-native-document-picker'
 import BottomSheet, { BottomSheetFlatList } from "@gorhom/bottom-sheet"
-import { Image, NativeModules, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { ActivityIndicator, Alert, Image, PermissionsAndroid, StyleSheet, Text, TextInput, TouchableHighlight,
+  TouchableOpacity, View
+} from "react-native"
 
 import COLOR from "../../../theme"
+import { showToastAndroid } from '../../../utils'
 import { DOC_ICON, PDF_ICON } from '../../../assets'
 import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
 import { selectChatMessages } from "../../../redux/slices/ConnectionSlice"
 import { statusBarHeight, windowHeight, windowWidth } from "../../../constants"
+
+//
 
 export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const sheetRef = useRef(null)
@@ -23,20 +23,99 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const userId = useSelector(selectUserId)
   const [file, setFile] = useState(undefined)
   const chatMessages = useSelector(selectChatMessages)
+  const [isUploading, setIsUploading] = useState(false)
 
   const snapPoints = useMemo(() => ["100%"], [])
 
+  const getFileType = (type) => {
+    let res
+    if (type.includes('image')) {
+      res = 'image'
+    } else if (type.includes('pdf')) {
+      res = 'pdf'
+    } else {
+      res = 'doc'
+    }
+
+    return res
+  }
+
+  const downloadFile = (url, fileName) => {
+    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE)
+    .then(res => {
+      if (res == 'granted') {
+        console.log('Starting to download file...')
+        showToastAndroid('Starting to download file...')
+
+        RNFS.downloadFile({
+          fromUrl: url,
+          toFile: `${RNFS.DownloadDirectoryPath}/${fileName}`,
+        })
+        .promise
+        .then((result) => {
+          showToastAndroid(`Download ${fileName} completed!`)
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+      }
+    })
+  }
+
+  // message with file as content
+  const FileContent = React.memo(({ item }) => {
+    const isMyMessage = item.sender == userId
+
+    return (
+      <TouchableHighlight
+        onPress={(!isMyMessage && item.contentType != 'text') ? downloadFile(item.content, item.fileName) : null}
+        underlayColor={isMyMessage ? 'transparent' : 'gray'}
+      >
+        <View style={styles.fileInMyMsgHolder}>
+          <Image
+            resizeMode='contain'
+            source={
+              item.contentType == 'image' ? (
+                {uri: item.content}
+              ) : (
+                item.contentType == 'pdf' ? PDF_ICON : DOC_ICON
+              )
+            }
+            style={item.contentType == 'image' ? styles.pickedPhoto : styles.pickedDocImg}
+          />
+
+          {
+            (item.contentType == 'image' && isMyMessage) ? null : (
+              <Text
+                numberOfLines={2}
+                style={isMyMessage ? styles.whiteText : styles.blackText}
+              >
+                {item.fileName}
+              </Text>
+            )
+          }
+        </View>
+      </TouchableHighlight>
+    )
+  })
+
+  // single chat message
   const renderItem = ({ item }) => {
     return (
       item.sender == userId ? (
-        <View style={styles.myMsgContentHolder}> 
-          <Text style={styles.whiteText}>{item.content}</Text>
+        <View style={styles.myMsgContentHolder}>
+          {
+            item.contentType == 'text' ? (
+              <Text style={styles.whiteText}>{item.content}</Text>
+            ) : (
+              <FileContent item={item}/>  
+            )
+          }
         </View>
-      )
-      : (
+      ) : (
         <View style={styles.peerMessage}>
           <Image
-            style={styles.user_photo}
+            style={styles.userPhoto}
             source={{uri: 'https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png'}}
           />
 
@@ -44,7 +123,13 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
             <Text style={styles.peerName}>{item.sender}</Text>
 
             <View style={styles.peerMsgContentHolder}>
-              <Text style={styles.blackText}>{item.content}</Text>
+              {
+                item.contentType == 'text' ? (
+                  <Text style={styles.blackText}>{item.content}</Text>
+                ) : (
+                  <FileContent item={item}/>
+                )
+              }
             </View>
           </View>
         </View>
@@ -54,6 +139,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
 
   const handleSendMsg = () => {
     if (draft != '') {
+      setIsUploading(true)
       sendMsgCallback({
         type: 'chat',
         sender: userId,
@@ -64,16 +150,18 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
       })
       setDraft('')
     } else {
+      setIsUploading(true)
       if (file) {
         getFileAsBase64()
         .then(res => {
           sendMsgCallback({
             type: 'chat',
             sender: userId,
-            content: res.replace(/^data:image\/\w+;base64,/, ''),
+            content: `data:${file.type};base64,` + res,
             roomId: roomId,
-            contentType: 'file',
+            fileName: file.name,
             createdAt: new Date().getTime(),
+            contentType: getFileType(file.type),
           })
           console.log('done send file to server')
           setFile(undefined)
@@ -88,21 +176,44 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
 
   const pickFile = () => {
     try {
-      DocumentPicker.pickSingle({
-        presentationStyle: 'formSheet',
-        type: [types.doc, types.docx, types.pdf, types.images]
-      })
-      .then(result => {
-        console.log(result)
-        setFile(result)
-      })
-      .catch(error => {
-        console.log(error)
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE)
+      .then((res) => {
+        if (res == 'granted') {
+          DocumentPicker.pickSingle({
+            presentationStyle: 'formSheet',
+            type: [types.doc, types.docx, types.pdf, types.images]
+          })
+          .then(result => {
+            console.log(result)
+            // maximum file size: 10 MB
+            if (result.size <= 10000000) {
+              setFile(result)
+            } else {
+              Alert.alert(
+                "Large file alert",
+                "Size of image and document must not be greater than 10 MB!",
+                [
+                  { text: "OK" }
+                ]
+              )
+            }
+          })
+          .catch(error => {
+            console.log(error)
+          })
+        }
       })
     } catch (error) {
       
     }
   }
+
+  // turn off activity indicator
+  useEffect(() => {
+    if (isUploading) {
+      setIsUploading(false)
+    }
+  }, [chatMessages])
 
   return (
     <View style={styles.overlay}>
@@ -151,6 +262,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
               <Ionicons name="add-circle-outline" color={'black'} size={28}/>
             </TouchableOpacity>
 
+            {/* Input */}
             {
               !file ? (
                 <TextInput
@@ -164,15 +276,14 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
                     setDraft(value)
                   }}
                 />
-              )
-              : (
-                <View style={styles.picked_photo_holder}>
+              ) : (
+                <View style={styles.pickedPhotoHolder}>
                   {
                     !file?.type.includes("image") ? (
-                      <View style={styles.picked_doc}>
+                      <View style={styles.pickedDoc}>
                         <Image
                           resizeMode='contain'
-                          style={styles.picked_doc_img}
+                          style={styles.pickedDocImg}
                           source={file?.type.includes("pdf") ? PDF_ICON : DOC_ICON}
                         />
 
@@ -182,7 +293,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
                       <Image
                         resizeMode='contain'
                         source={{uri: file?.uri}}
-                        style={styles.picked_photo}
+                        style={styles.pickedPhoto}
                       />
                     )
                   }
@@ -190,7 +301,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
                   <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={() => setFile(undefined)}
-                    style={styles.remove_photo_button}
+                    style={styles.removePhotoButton}
                   >
                     <Text style={{color: '#fff', fontSize: 20}}> —</Text>
                   </TouchableOpacity>
@@ -198,13 +309,24 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
               )
             }
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.sendBtn}
-              onPress={handleSendMsg}
-            >
-              <Text style={styles.sendText}>SEND</Text>
-            </TouchableOpacity>
+            {/* Send button */}
+            {
+              isUploading ? (
+                <ActivityIndicator
+                  size={20}
+                  color={'black'}
+                  style={{marginBottom: 16, marginRight: 4}}
+                />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.sendBtn}
+                  onPress={handleSendMsg}
+                >
+                  <Text style={styles.sendText}>SEND</Text>
+                </TouchableOpacity>
+              )
+            }
           </View>
         </View>
       </BottomSheet>
@@ -330,30 +452,30 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginBottom: 4,
   },
-  user_photo: {
+  userPhoto: {
     width: 26,
     height: 26,
     marginTop: 16,
     marginRight: 10,
     borderRadius: 13,
   },
-  picked_doc: {
+  pickedDoc: {
     width: '90%',
     height: '100%',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'space-between'
   },
-  picked_doc_img: {
+  pickedDocImg: {
     width: '80%',
     height: '70%',
   },
-  picked_photo: {
+  pickedPhoto: {
     width: '90%',
     height: '100%',
     borderRadius: 10
   },
-  picked_photo_holder: {
+  pickedPhotoHolder: {
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',
@@ -362,7 +484,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#EEEEEE',
   },
-  remove_photo_button : {
+  fileInMyMsgHolder: {
+    alignItems: 'center',
+    height: windowHeight / 6,
+    width: windowWidth / 2,
+    justifyContent: 'space-between',
+  },
+  removePhotoButton : {
     top: 4,
     right: 14,
     width: 26,

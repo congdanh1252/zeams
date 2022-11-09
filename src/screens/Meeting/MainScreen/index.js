@@ -382,6 +382,7 @@ export const MainScreen = ({ navigation, route }) => {
               id: obj.createdAt,
               sender: obj.sender,
               content: obj.content,
+              fileName: obj.fileName,
               contentType: obj.contentType,
               createdAt: obj.createdAt
             }

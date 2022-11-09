@@ -2,6 +2,7 @@ import io from 'socket.io-client'
 import notifee, { AndroidImportance } from '@notifee/react-native'
 
 import { SERVER_URL } from '../constants'
+import { ToastAndroid } from 'react-native'
 
 const connection = io(SERVER_URL, {transports: ['websocket']})
 
@@ -55,9 +56,18 @@ const createNotifeeChannel = async () => {
   }
 }
 
+const showToastAndroid = (msg) => {
+  ToastAndroid.showWithGravity(
+    msg,
+    ToastAndroid.SHORT,
+    ToastAndroid.CENTER
+  )
+}
+
 export {
   connection,
   generateRoomId,
+  showToastAndroid,
   convertCodeToDisplay,
-  createNotifeeChannel
+  createNotifeeChannel,
 }
