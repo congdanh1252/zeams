@@ -94,7 +94,7 @@ const TwoPeerLayout = () => {
           {
             item.remoteStream ?
             <RTCView
-              zOrder={2}
+              zOrder={1}
               mirror={false}
               objectFit={'cover'}
               streamURL={item.remoteStream.toURL()}

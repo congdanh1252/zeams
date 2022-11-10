@@ -4,11 +4,11 @@ import firestore from '@react-native-firebase/firestore'
 import Clipboard from '@react-native-clipboard/clipboard'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { RTCView, mediaDevices } from 'react-native-webrtc'
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native'
 
 import COLOR from '../../../theme'
-import { convertCodeToDisplay } from '../../../utils'
 import BackButton from '../../../components/BackButton'
+import { convertCodeToDisplay, showToastAndroid } from '../../../utils'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
 
 const isVoiceOnly = false
@@ -36,13 +36,7 @@ export const JoinMeeting = ({ navigation, route }) => {
   const copyRoomId = () => {
     Clipboard.setString(roomId)
 
-    Alert.alert(
-      "COPIED",
-      "Room code has been in your clipboard now",
-      [
-        { text: "OK" }
-      ]
-    )
+    showToastAndroid('Room code has been in your clipboard now')
   }
 
   const handleJoiningMeet = () => {

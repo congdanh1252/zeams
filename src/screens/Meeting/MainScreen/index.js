@@ -16,7 +16,7 @@ import BottomStack from './BottomStack'
 import PeerSection from './PeerSection'
 import { statusBarHeight } from '../../../constants'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
-import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
+import { connection, convertCodeToDisplay, createNotifeeChannel, handleError } from '../../../utils'
 import { selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
 
 const servers = {
@@ -136,7 +136,7 @@ export const MainScreen = ({ navigation, route }) => {
       
       setIsSharing(false)
     } catch (e) {
-
+      handleError()
     }
   }
 
@@ -309,9 +309,9 @@ export const MainScreen = ({ navigation, route }) => {
               }
               const index = findOfferIndex(obj)
 
-              if (!otherPeers.current[index].peerConnection) {
-                createPeerConnection(index)
-              } 
+              // if (!otherPeers.current[index].peerConnection) {
+              //   createPeerConnection(index)
+              // } 
 
               if (obj.data != otherPeers.current[index].peerConnection?.localDescription) {
                 if (otherPeers.current[index].peerConnection.signalingState != 'stable') {
@@ -471,6 +471,7 @@ export const MainScreen = ({ navigation, route }) => {
         if (otherPeers.current[index].peerConnection?.signalingState != 'stable') {
           return
         }
+
         otherPeers.current[index].peerConnection?.createOffer(sessionConstraints)
         .then(offerDescription => {
           otherPeers.current[index].peerConnection?.setLocalDescription(offerDescription)
@@ -556,7 +557,7 @@ export const MainScreen = ({ navigation, route }) => {
       <TouchableOpacity
         onPress={startCall}
         activeOpacity={0.7}
-        style={styles.callBtn}>
+        style={styles.roomId}>
         <Text style={styles.roomCodeText}>{convertCodeToDisplay(roomId)}</Text>
       </TouchableOpacity>
 
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
     marginTop: statusBarHeight,
     backgroundColor: COLOR.black,
   },
-  callBtn: {
+  roomId: {
     top: 0,
     padding: 2,
     alignSelf: 'center',

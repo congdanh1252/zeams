@@ -3,7 +3,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons'
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Pressable } from 'react-native'
 
 import COLOR from '../../theme'
-import { Empty } from './Empty'
+import { Empty } from '../../components/Empty'
 import { statusBarHeight } from '../../constants'
 
 const DATA = [
@@ -108,6 +108,8 @@ const renderItem = ({ item }) => {
 }
 
 export const SchedulesScreen = () => {
+  const EMPTY_MSG = 'You have no schedules now!'
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -115,9 +117,9 @@ export const SchedulesScreen = () => {
         horizontal={false}
         style={styles.list}
         renderItem={renderItem}
-        ListEmptyComponent={Empty}
         keyExtractor={item => item.date}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={<Empty message={EMPTY_MSG}/>}
       />
 
       <Pressable

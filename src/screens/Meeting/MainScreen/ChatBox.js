@@ -9,13 +9,20 @@ import { ActivityIndicator, Alert, Image, PermissionsAndroid, StyleSheet, Text, 
 } from "react-native"
 
 import COLOR from "../../../theme"
-import { showToastAndroid } from '../../../utils'
-import { DOC_ICON, PDF_ICON } from '../../../assets'
+import { Empty } from '../../../components/Empty'
+import { DOC_ICON, PDF_ICON, USER_ICON } from '../../../assets'
+import { showToastAndroid, handleError } from '../../../utils'
 import { selectUserId } from "../../../redux/slices/AuthenticationSlice"
 import { selectChatMessages } from "../../../redux/slices/ConnectionSlice"
 import { statusBarHeight, windowHeight, windowWidth } from "../../../constants"
 
-//
+const EmptyView = () => {
+  const EMPTY_MSG = 'Start to chat now by sending first message! 👋'
+
+  return (
+    <Empty message={EMPTY_MSG} upSideDown={true}/>
+  )
+}
 
 export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const sheetRef = useRef(null)
@@ -56,8 +63,11 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           showToastAndroid(`Download ${fileName} completed!`)
         })
         .catch((err) => {
+          handleError()
           console.log(err)
         })
+      } else {
+        showToastAndroid('Cannot perform action without permission!')
       }
     })
   }
@@ -68,7 +78,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
 
     return (
       <TouchableHighlight
-        onPress={(!isMyMessage && item.contentType != 'text') ? downloadFile(item.content, item.fileName) : null}
+        onPress={() => (!isMyMessage && item.contentType != 'text') ? downloadFile(item.content, item.fileName) : null}
         underlayColor={isMyMessage ? 'transparent' : 'gray'}
       >
         <View style={styles.fileInMyMsgHolder}>
@@ -85,7 +95,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           />
 
           {
-            (item.contentType == 'image' && isMyMessage) ? null : (
+            (item.contentType == 'image' || isMyMessage) ? null : (
               <Text
                 numberOfLines={2}
                 style={isMyMessage ? styles.whiteText : styles.blackText}
@@ -115,8 +125,8 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
       ) : (
         <View style={styles.peerMessage}>
           <Image
+            source={USER_ICON}
             style={styles.userPhoto}
-            source={{uri: 'https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png'}}
           />
 
           <View style={styles.withNameContainer}>
@@ -166,6 +176,10 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           console.log('done send file to server')
           setFile(undefined)
         })
+        .catch(err => {
+          handleError()
+          console.log(err)
+        })
       }
     }
   }
@@ -185,8 +199,8 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           })
           .then(result => {
             console.log(result)
-            // maximum file size: 10 MB
-            if (result.size <= 10000000) {
+            // maximum file size: 1 MB
+            if (result.size <= 1000000) {
               setFile(result)
             } else {
               Alert.alert(
@@ -199,12 +213,16 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
             }
           })
           .catch(error => {
+            handleError()
             console.log(error)
           })
+        } else {
+          showToastAndroid('Cannot perform action without permission!')
         }
       })
     } catch (error) {
-      
+      handleError()
+      console.log(error)
     }
   }
 
@@ -248,6 +266,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
             data={chatMessages}
             renderItem={renderItem}
             style={styles.chatSection}
+            ListEmptyComponent={EmptyView}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.messageList}

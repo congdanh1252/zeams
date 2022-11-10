@@ -6,8 +6,8 @@ import { useNavigation } from '@react-navigation/native'
 import COLOR from '../../theme'
 import { VISUAL_IMG } from '../../assets'
 import Button from '../../components/Button'
-import { generateRoomId } from '../../utils'
-import { selectUserId, setUserId } from '../../redux/slices/AuthenticationSlice'
+import { generateRoomId, mmkv } from '../../utils'
+import { setUserId } from '../../redux/slices/AuthenticationSlice'
 
 const HomeScreen = () => {
   const dispatch = useDispatch()
@@ -25,9 +25,11 @@ const HomeScreen = () => {
 
   // gen userId
   useEffect(() => {
+    const savedName = mmkv.getString('USER_NAME')
+
     dispatch(
       setUserId({
-        userId: generateRoomId()
+        userId: savedName ? savedName : generateRoomId()
       })
     )
   }, [])
