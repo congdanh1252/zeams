@@ -20,7 +20,11 @@ const EmptyView = () => {
   const EMPTY_MSG = 'Start to chat now by sending first message! 👋'
 
   return (
-    <Empty message={EMPTY_MSG} upSideDown={true}/>
+    <>
+      <Text style={styles.noticeText}>(Chat in call will not be saved)</Text>
+
+      <Empty message={EMPTY_MSG} upSideDown={true}/>
+    </>
   )
 }
 
@@ -95,7 +99,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           />
 
           {
-            (item.contentType == 'image' || isMyMessage) ? null : (
+            (item.contentType == 'image' && isMyMessage || !(item.contentType != 'image' && isMyMessage)) ? null : (
               <Text
                 numberOfLines={2}
                 style={isMyMessage ? styles.whiteText : styles.blackText}
@@ -199,8 +203,8 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           })
           .then(result => {
             console.log(result)
-            // maximum file size: 1 MB
-            if (result.size <= 1000000) {
+            // maximum file size: 10 MB
+            if (result.size <= 10000000) {
               setFile(result)
             } else {
               Alert.alert(
@@ -368,8 +372,8 @@ const styles = StyleSheet.create({
     height: '8%',
     width: '100%',
     paddingTop: 12,
-    paddingHorizontal: 12,
     flexDirection: 'row',
+    paddingHorizontal: 12,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     backgroundColor: 'black',
@@ -414,8 +418,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     color: 'white',
-    fontWeight: '500',
     letterSpacing: 2,
+    fontWeight: '500',
+  },
+  noticeText: {
+    fontSize: 12,
+    transform: [
+      {rotate: '180deg'},
+      {rotateY: '180deg'}
+    ],
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   closeBtn: {
     paddingLeft: 8,
