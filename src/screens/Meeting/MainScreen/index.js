@@ -309,9 +309,9 @@ export const MainScreen = ({ navigation, route }) => {
               }
               const index = findOfferIndex(obj)
 
-              // if (!otherPeers.current[index].peerConnection) {
-              //   createPeerConnection(index)
-              // } 
+              if (!otherPeers.current[index].peerConnection) {
+                createPeerConnection(index)
+              } 
 
               if (obj.data != otherPeers.current[index].peerConnection?.localDescription) {
                 if (otherPeers.current[index].peerConnection.signalingState != 'stable') {
