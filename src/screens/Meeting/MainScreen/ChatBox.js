@@ -1,5 +1,6 @@
 import RNFS from 'react-native-fs'
 import { useSelector } from "react-redux"
+import ImageView from "react-native-image-viewing"
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import React, { useMemo, useRef, useState, useEffect } from "react"
 import DocumentPicker, { types } from 'react-native-document-picker'
@@ -32,11 +33,16 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const sheetRef = useRef(null)
   const [draft, setDraft] = useState('')
   const userId = useSelector(selectUserId)
+  const [viewImg, setViewImg] = useState('')
   const [file, setFile] = useState(undefined)
   const chatMessages = useSelector(selectChatMessages)
   const [isUploading, setIsUploading] = useState(false)
 
   const snapPoints = useMemo(() => ["100%"], [])
+
+  const toggleImageViewer = (img = '') => {
+    setViewImg(img)
+  }
 
   const getFileType = (type) => {
     let res
@@ -80,9 +86,26 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
   const FileContent = React.memo(({ item }) => {
     const isMyMessage = item.sender == userId
 
+    const handleContentPress = () => {
+      if (item.contentType == 'text') {
+        return
+      }
+      if (isMyMessage) {
+        if (item.contentType == 'image') {
+          toggleImageViewer(item.content)
+        }
+      } else {
+        if (item.contentType == 'image') {
+          toggleImageViewer(item.content)
+        } else {
+          downloadFile(item.content, item.fileName)
+        }
+      }
+    }
+
     return (
       <TouchableHighlight
-        onPress={() => (!isMyMessage && item.contentType != 'text') ? downloadFile(item.content, item.fileName) : null}
+        onPress={handleContentPress}
         underlayColor={isMyMessage ? 'transparent' : 'gray'}
       >
         <View style={styles.fileInMyMsgHolder}>
@@ -99,7 +122,7 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           />
 
           {
-            (item.contentType == 'image' && isMyMessage || !(item.contentType != 'image' && isMyMessage)) ? null : (
+            (item.contentType == 'image') ? null : (
               <Text
                 numberOfLines={2}
                 style={isMyMessage ? styles.whiteText : styles.blackText}
@@ -353,6 +376,16 @@ export const ChatBox = ({ roomId, closeCallback, sendMsgCallback }) => {
           </View>
         </View>
       </BottomSheet>
+
+      {/* Image in Chat Viewer */}
+      <ImageView
+        imageIndex={0}
+        images={[{uri: viewImg}]}
+        keyExtractor={(img) => img.uri}
+        presentationStyle={'fullScreen'}
+        onRequestClose={toggleImageViewer}
+        visible={viewImg != '' ? true : false}
+      />
     </View>
   )
 }
@@ -442,8 +475,8 @@ const styles = StyleSheet.create({
     minHeight: '9%',
     paddingBottom: 22,
     flexDirection: 'row',
-    alignItems: 'flex-end',
     paddingHorizontal: 12,
+    alignItems: 'flex-end',
     backgroundColor: 'white',
     justifyContent: 'space-between',
   },

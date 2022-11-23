@@ -150,6 +150,7 @@ export const MainScreen = ({ navigation, route }) => {
     localStream?.getAudioTracks().forEach(track => {
       track.enabled = !track.enabled
     })
+
     setMuted(!muted)
   }
 
@@ -337,7 +338,9 @@ export const MainScreen = ({ navigation, route }) => {
                 })
               })
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log(e)
+          }
           break
         case 'answer':
           if (obj.receiver == userId) {
@@ -439,6 +442,8 @@ export const MainScreen = ({ navigation, route }) => {
 
       otherPeers.current[index].peerConnection?.addEventListener('icecandidate', event => {
         if (event.candidate) {
+          console.log("CANDIDATE: \n")
+          console.log(event.candidate)
           sendToServer({
             type: 'ice-candidate',
             roomId: roomId,
@@ -460,7 +465,7 @@ export const MainScreen = ({ navigation, route }) => {
         } else {
           console.log('event.track')
           remoteStream = new MediaStream([event.track])
-          otherPeers.current[index].remoteStream = new MediaStream([event.track])
+          // otherPeers.current[index].remoteStream = new MediaStream([event.track])
         }
         otherPeers.current[index].remoteStream = remoteStream
         deepClonePeers()
@@ -506,6 +511,10 @@ export const MainScreen = ({ navigation, route }) => {
           otherPeers.current[index].peerConnection?.restartIce()
         }
         console.log('-----------ICE Connection state: ' + state + '\n')
+      })
+
+      otherPeers.current[index].peerConnection?.addEventListener('icecandidateerror', event => {
+        console.log('ICE Candidate ERROR: ' + event)
       })
     }
   }
