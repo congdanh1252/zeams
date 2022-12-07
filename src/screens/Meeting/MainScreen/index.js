@@ -268,7 +268,10 @@ export const MainScreen = ({ navigation, route }) => {
       roomId: roomId,
       roomRef: roomRef,
       data: {
-        sender: userId,
+        sender: {
+          id: userId,
+          name: ''
+        }
       },
       create: action == 'join' ? false : true,
     })
@@ -279,14 +282,14 @@ export const MainScreen = ({ navigation, route }) => {
         case 'id':
           break
         case 'join':
-          if (obj.data.receiver != null && obj.data.receiver == userId) {
+          if (obj.data.receiver.id && obj.data.receiver.id == userId) {
             setDocRef(obj.data.docRef)
 
             let arr = []
             obj.data.participants.forEach(person => {
-              if (person != userId) {
+              if (person.id != userId) {
                 arr.push({
-                  id: person,
+                  id: person.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -442,8 +445,6 @@ export const MainScreen = ({ navigation, route }) => {
 
       otherPeers.current[index].peerConnection?.addEventListener('icecandidate', event => {
         if (event.candidate) {
-          console.log("CANDIDATE: \n")
-          console.log(event.candidate)
           sendToServer({
             type: 'ice-candidate',
             roomId: roomId,
