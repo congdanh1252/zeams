@@ -282,7 +282,7 @@ export const MainScreen = ({ navigation, route }) => {
         case 'id':
           break
         case 'join':
-          if (obj.data.receiver.id && obj.data.receiver.id == userId) {
+          if (obj.data.receiver && obj.data.receiver == userId) {
             setDocRef(obj.data.docRef)
 
             let arr = []
