@@ -90,7 +90,7 @@ export const MainScreen = ({ navigation, route }) => {
     for (let i = 0; i < otherPeers.current.length; i++) {
       const peer = otherPeers.current[i]
 
-      if (peer.id == msg.sender) {
+      if (peer.id == msg.sender.id) {
         result = i
         break
       }
@@ -270,7 +270,7 @@ export const MainScreen = ({ navigation, route }) => {
       data: {
         sender: {
           id: userId,
-          name: ''
+          name: userId
         }
       },
       create: action == 'join' ? false : true,
@@ -306,7 +306,7 @@ export const MainScreen = ({ navigation, route }) => {
 
               if (check < 0) {
                 otherPeers.current.push({
-                  id: obj.sender,
+                  id: obj.sender.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -335,7 +335,10 @@ export const MainScreen = ({ navigation, route }) => {
                 sendToServer({
                   type: 'answer',
                   roomId: roomId,
-                  sender: userId,
+                  sender: {
+                    id: userId,
+                    name: userId,
+                  },
                   receiver: otherPeers.current[index]?.id,
                   data: answerDescription,
                 })
@@ -351,7 +354,7 @@ export const MainScreen = ({ navigation, route }) => {
 
             if (check < 0) {
               otherPeers.current.push({
-                id: obj.sender,
+                id: obj.sender.id,
                 remoteStream: undefined,
                 peerConnection: undefined,
               })
@@ -366,11 +369,11 @@ export const MainScreen = ({ navigation, route }) => {
 
             if (
               obj.receiver == userId &&
-              obj.sender == otherPeers.current[check].id
+              obj.sender.id == otherPeers.current[check].id
             ) {
               if (check < 0) {
                 otherPeers.current.push({
-                  id: obj.sender,
+                  id: obj.sender.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -448,7 +451,10 @@ export const MainScreen = ({ navigation, route }) => {
           sendToServer({
             type: 'ice-candidate',
             roomId: roomId,
-            sender: userId,
+            sender: {
+              id: userId,
+              name: userId,
+            },
             receiver: otherPeers.current[index].id,
             data: event.candidate,
           })
@@ -485,7 +491,10 @@ export const MainScreen = ({ navigation, route }) => {
           sendToServer({
             type: 'offer',
             roomId: roomId,
-            sender: userId,
+            sender: {
+              id: userId,
+              name: userId,
+            },
             receiver: otherPeers.current[index].id,
             data: offerDescription,
           })
