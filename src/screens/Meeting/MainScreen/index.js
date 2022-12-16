@@ -87,10 +87,12 @@ export const MainScreen = ({ navigation, route }) => {
 
   const findOfferIndex = (msg) => {
     let result = -1
+    const isHangUp = msg.type == 'hang-up'
+
     for (let i = 0; i < otherPeers.current.length; i++) {
       const peer = otherPeers.current[i]
 
-      if (peer.id == msg.sender.id) {
+      if (peer.id == (isHangUp ? msg.sender : msg.sender.id)) {
         result = i
         break
       }
