@@ -1,22 +1,13 @@
 import React from 'react'
-import { Text, View } from 'react-native'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
 import COLOR from '../theme'
 import HomeScreen from '../screens/Home'
+import { SettingScreen } from '../screens/Setting'
 import { SchedulesScreen } from '../screens/Schedule'
 
 const Tab = createBottomTabNavigator()
-
-const SettingScreen = () => {
-  return (
-    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-      <Text>Settings!</Text>
-    </View>
-  )
-}
 
 const BottomTabs = () => {
   return (

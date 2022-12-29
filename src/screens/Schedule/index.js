@@ -1,8 +1,9 @@
 import React from 'react'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Pressable } from 'react-native'
 
 import COLOR from '../../theme'
+import { Empty } from '../../components/Empty'
 import { statusBarHeight } from '../../constants'
 
 const DATA = [
@@ -107,6 +108,8 @@ const renderItem = ({ item }) => {
 }
 
 export const SchedulesScreen = () => {
+  const EMPTY_MSG = 'You have no schedules now!'
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -116,7 +119,21 @@ export const SchedulesScreen = () => {
         renderItem={renderItem}
         keyExtractor={item => item.date}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={<Empty message={EMPTY_MSG}/>}
       />
+
+      <Pressable
+        activeOpacity={0.7}
+        style={({ pressed }) => [
+          styles.createScheduleBtn, {
+            backgroundColor: pressed ? '#191919' : 'rgba(255, 255, 255, 0.9)'
+          }
+        ]}
+      >
+        {({ pressed }) => (
+          <Ionicons name='add-outline' size={28} color={pressed ? 'white' : 'black'}/>
+        )}
+      </Pressable>
     </View>
   )
 }
@@ -158,6 +175,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLOR.white,
+  },
+  createScheduleBtn: {
+    right: 16,
+    bottom: 4,
+    width: 46,
+    height: 46,
+    borderWidth: 0,
+    borderRadius: 23,
+    borderColor: '#fff',
+    position: 'absolute',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    justifyContent: 'center',
+    backgroundColor: 'white',
   },
   blackText: {
     color: COLOR.black,

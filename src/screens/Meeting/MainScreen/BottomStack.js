@@ -1,21 +1,32 @@
-import React from "react"
+import React, { useState } from "react"
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { StyleSheet, TouchableHighlight, View } from "react-native"
 
 import { windowWidth } from "../../../constants"
 
-const SingleButton = ({ name, onPress, isExitButton = false }) => {
+const SingleButton = ({
+  name,
+  onPress,
+  showBadge = false,
+  isExitButton = false
+}) => {
   return (
     <TouchableHighlight
       onPress={onPress}
       underlayColor={'transparent'}
       style={[styles.singleButton, isExitButton ? styles.exitButton : null]}
     >
-      <Ionicons
-        name={name}
-        size={name == 'close-outline' ? 26 : 22}
-        color={name == 'stop-circle-outline' ? 'red' : 'white'}
-      />
+      <>
+        <Ionicons
+          name={name}
+          size={name == 'close-outline' ? 26 : 22}
+          color={name == 'stop-circle-outline' ? 'red' : 'white'}
+        />
+
+        {
+          showBadge && <View style={styles.notiDot}/>
+        }
+      </>
     </TouchableHighlight>
   )
 }
@@ -25,14 +36,12 @@ const BottomStack = ({
   isMuted,
   isSharing,
   toggleMute,
+  openChatBox,
   shareScreen,
   stopSharing,
-  switchCamera
+  switchCamera,
+  showChatBadge
 }) => {
-  const dummyFunction = () => {
-
-  }
-
   return (
     <View style={styles.container}>
       <SingleButton
@@ -46,8 +55,9 @@ const BottomStack = ({
       />
 
       <SingleButton
-        onPress={dummyFunction}
+        onPress={openChatBox}
         name={'chatbox-outline'}
+        showBadge={showChatBadge}
       />
 
       <SingleButton
@@ -73,7 +83,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
-    // backgroundColor: 'blue'
   },
   singleButton: {
     paddingLeft: 0,
@@ -86,5 +95,14 @@ const styles = StyleSheet.create({
   },
   exitButton: {
     backgroundColor: 'red'
+  },
+  notiDot: {
+    top: 0,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    position: 'absolute',
+    backgroundColor: '#40bd81'
   }
 })

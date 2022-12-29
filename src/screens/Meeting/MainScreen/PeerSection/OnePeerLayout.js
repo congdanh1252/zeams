@@ -12,7 +12,7 @@ import { selectLocalStream } from "../../../../redux/slices/ConnectionSlice"
 const FRAME_WIDTH = windowWidth - 48
 
 const OnePeerLayout = () => {
-  const userId = useSelector(selectUserId)
+  const userId = 'YOU'
   const localStream = useSelector(selectLocalStream)
 
   return (
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: 12,
     borderColor: COLOR.gray,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
   },
   frameContent: {
     flex: 1,

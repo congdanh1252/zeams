@@ -11,20 +11,33 @@ import React, { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native'
 
 import COLOR from '../../../theme'
+import { ChatBox } from './ChatBox'
 import BottomStack from './BottomStack'
 import PeerSection from './PeerSection'
 import { statusBarHeight } from '../../../constants'
 import { selectUserId } from '../../../redux/slices/AuthenticationSlice'
-import { connection, convertCodeToDisplay, createNotifeeChannel } from '../../../utils'
-import { selectLocalStream, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
+import { connection, convertCodeToDisplay, createNotifeeChannel, handleError } from '../../../utils'
+import { selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPeers } from '../../../redux/slices/ConnectionSlice'
 
 const servers = {
   iceServers: [
     {
-      urls: [
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-      ],
+      urls: "stun:relay.metered.ca:80",
+    },
+    {
+      urls: "turn:relay.metered.ca:80",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
+    },
+    {
+      urls: "turn:relay.metered.ca:443",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
+    },
+    {
+      urls: "turn:relay.metered.ca:443?transport=tcp",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
     },
   ],
   // iceServers: [
@@ -67,10 +80,11 @@ export const MainScreen = ({ navigation, route }) => {
   const { action, roomId, roomRef } = route?.params
   const dispatch = useDispatch()
   const otherPeers = useRef([])
-  const [others, setOthers] = useState([])
   const userId = useSelector(selectUserId)
   const [muted, setMuted] = useState(false)
   const [docRef, setDocRef] = useState(roomId)
+  const [showChat, setShowChat] = useState(false)
+  const [hasNewMsg, setHasNewMsg] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
   const localStream = useSelector(selectLocalStream)
   const [initialising, setInitialising] = useState(true)
@@ -85,10 +99,12 @@ export const MainScreen = ({ navigation, route }) => {
 
   const findOfferIndex = (msg) => {
     let result = -1
+    const isHangUp = msg.type == 'hang-up'
+
     for (let i = 0; i < otherPeers.current.length; i++) {
       const peer = otherPeers.current[i]
 
-      if (peer.id == msg.sender) {
+      if (peer.id == (isHangUp ? msg.sender : msg.sender.id)) {
         result = i
         break
       }
@@ -98,7 +114,9 @@ export const MainScreen = ({ navigation, route }) => {
 
   const preLoadLocalStream = () => {
     mediaDevices.getUserMedia(mediaConstraints).then(stream => {
-      dispatch(updateLocalStream({ localStream: stream }))
+      dispatch(
+        updateLocalStream({ localStream: stream })
+      )
     })
   }
 
@@ -123,7 +141,7 @@ export const MainScreen = ({ navigation, route }) => {
       await notifee.stopForegroundService()
       await notifee.deleteChannel('screen_capture')
 
-      otherPeers.current.forEach(peer => {
+      otherPeers.current?.forEach(peer => {
         peer.peerConnection
         .getSenders().forEach(sender => {
           sender.replaceTrack(localStream.getVideoTracks()[0])
@@ -132,7 +150,7 @@ export const MainScreen = ({ navigation, route }) => {
       
       setIsSharing(false)
     } catch (e) {
-
+      handleError()
     }
   }
 
@@ -146,7 +164,15 @@ export const MainScreen = ({ navigation, route }) => {
     localStream?.getAudioTracks().forEach(track => {
       track.enabled = !track.enabled
     })
+
     setMuted(!muted)
+  }
+
+  const toggleChatBox = () => {
+    if (!showChat) {
+      setHasNewMsg(false)
+    }
+    setShowChat(!showChat)
   }
 
   const handleCleanUpConnection = (which) => {
@@ -189,7 +215,6 @@ export const MainScreen = ({ navigation, route }) => {
         connection.removeAllListeners()
         connection.disconnect()
         connection.close()
-        setOthers([])
         otherPeers.current = []
         dispatch(updateLocalStream({ localStream: undefined }))
         console.log('-------Clean up connection------')
@@ -228,6 +253,7 @@ export const MainScreen = ({ navigation, route }) => {
       otherPeers.current.splice(which, 1)
       deepClonePeers()
     }
+    stopScreenSharing()
     deepClonePeers()
   }
 
@@ -256,7 +282,10 @@ export const MainScreen = ({ navigation, route }) => {
       roomId: roomId,
       roomRef: roomRef,
       data: {
-        sender: userId,
+        sender: {
+          id: userId,
+          name: userId
+        }
       },
       create: action == 'join' ? false : true,
     })
@@ -267,14 +296,14 @@ export const MainScreen = ({ navigation, route }) => {
         case 'id':
           break
         case 'join':
-          if (obj.data.receiver != null && obj.data.receiver == userId) {
+          if (obj.data.receiver && obj.data.receiver == userId) {
             setDocRef(obj.data.docRef)
 
             let arr = []
             obj.data.participants.forEach(person => {
-              if (person != userId) {
+              if (person.id != userId) {
                 arr.push({
-                  id: person,
+                  id: person.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -291,7 +320,7 @@ export const MainScreen = ({ navigation, route }) => {
 
               if (check < 0) {
                 otherPeers.current.push({
-                  id: obj.sender,
+                  id: obj.sender.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -320,13 +349,18 @@ export const MainScreen = ({ navigation, route }) => {
                 sendToServer({
                   type: 'answer',
                   roomId: roomId,
-                  sender: userId,
+                  sender: {
+                    id: userId,
+                    name: userId,
+                  },
                   receiver: otherPeers.current[index]?.id,
                   data: answerDescription,
                 })
               })
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log(e)
+          }
           break
         case 'answer':
           if (obj.receiver == userId) {
@@ -334,7 +368,7 @@ export const MainScreen = ({ navigation, route }) => {
 
             if (check < 0) {
               otherPeers.current.push({
-                id: obj.sender,
+                id: obj.sender.id,
                 remoteStream: undefined,
                 peerConnection: undefined,
               })
@@ -349,11 +383,11 @@ export const MainScreen = ({ navigation, route }) => {
 
             if (
               obj.receiver == userId &&
-              obj.sender == otherPeers.current[check].id
+              obj.sender.id == otherPeers.current[check].id
             ) {
               if (check < 0) {
                 otherPeers.current.push({
-                  id: obj.sender,
+                  id: obj.sender.id,
                   remoteStream: undefined,
                   peerConnection: undefined,
                 })
@@ -364,6 +398,30 @@ export const MainScreen = ({ navigation, route }) => {
               deepClonePeers()
             }
           } catch (err) {}
+          break
+        case 'chat':
+          if (obj.roomId == roomId) {
+            let newMessage = {
+              id: obj.createdAt,
+              sender: obj.sender,
+              content: obj.content,
+              fileName: obj.fileName,
+              contentType: obj.contentType,
+              createdAt: obj.createdAt
+            }
+
+            dispatch(
+              updateChatMessages({ newMessage: newMessage })
+            )
+
+            if (showChat == false) {
+              setHasNewMsg(true)
+            } else {
+              if (hasNewMsg) {
+                setHasNewMsg(false)
+              }
+            }
+          }
           break
         case 'hang-up':
           const index = findOfferIndex(obj)
@@ -385,7 +443,9 @@ export const MainScreen = ({ navigation, route }) => {
 
       mediaDevices.getUserMedia(mediaConstraints)
       .then(stream => {
-        dispatch(updateLocalStream({ localStream: stream }))
+        dispatch(
+          updateLocalStream({ localStream: stream })
+        )
         stream?.getTracks().forEach(track => {
           otherPeers.current[index].peerConnection.addTrack(track)
         })
@@ -393,7 +453,6 @@ export const MainScreen = ({ navigation, route }) => {
         // replace old tracks in other peers with latest tracks
         otherPeers.current.forEach((peer, idx) => {
           if (idx != index && peer.peerConnection) {
-            console.log('REPLACE TRACK')
             peer.peerConnection.getSenders().forEach(sender => {
               sender.replaceTrack(stream.getVideoTracks()[0])
             })
@@ -406,7 +465,10 @@ export const MainScreen = ({ navigation, route }) => {
           sendToServer({
             type: 'ice-candidate',
             roomId: roomId,
-            sender: userId,
+            sender: {
+              id: userId,
+              name: userId,
+            },
             receiver: otherPeers.current[index].id,
             data: event.candidate,
           })
@@ -424,7 +486,7 @@ export const MainScreen = ({ navigation, route }) => {
         } else {
           console.log('event.track')
           remoteStream = new MediaStream([event.track])
-          otherPeers.current[index].remoteStream = new MediaStream([event.track])
+          // otherPeers.current[index].remoteStream = new MediaStream([event.track])
         }
         otherPeers.current[index].remoteStream = remoteStream
         deepClonePeers()
@@ -435,6 +497,7 @@ export const MainScreen = ({ navigation, route }) => {
         if (otherPeers.current[index].peerConnection?.signalingState != 'stable') {
           return
         }
+
         otherPeers.current[index].peerConnection?.createOffer(sessionConstraints)
         .then(offerDescription => {
           otherPeers.current[index].peerConnection?.setLocalDescription(offerDescription)
@@ -442,7 +505,10 @@ export const MainScreen = ({ navigation, route }) => {
           sendToServer({
             type: 'offer',
             roomId: roomId,
-            sender: userId,
+            sender: {
+              id: userId,
+              name: userId,
+            },
             receiver: otherPeers.current[index].id,
             data: offerDescription,
           })
@@ -469,6 +535,10 @@ export const MainScreen = ({ navigation, route }) => {
           otherPeers.current[index].peerConnection?.restartIce()
         }
         console.log('-----------ICE Connection state: ' + state + '\n')
+      })
+
+      otherPeers.current[index].peerConnection?.addEventListener('icecandidateerror', event => {
+        console.log('ICE Candidate ERROR: ' + event)
       })
     }
   }
@@ -520,7 +590,7 @@ export const MainScreen = ({ navigation, route }) => {
       <TouchableOpacity
         onPress={startCall}
         activeOpacity={0.7}
-        style={styles.callBtn}>
+        style={styles.roomId}>
         <Text style={styles.roomCodeText}>{convertCodeToDisplay(roomId)}</Text>
       </TouchableOpacity>
 
@@ -530,9 +600,15 @@ export const MainScreen = ({ navigation, route }) => {
         isSharing={isSharing}
         toggleMute={toggleMute}
         shareScreen={shareScreen}
+        showChatBadge={hasNewMsg}
+        openChatBox={toggleChatBox}
         switchCamera={switchCamera}
         stopSharing={stopScreenSharing}
       />
+
+      {
+        showChat && <ChatBox roomId={roomId} closeCallback={toggleChatBox} sendMsgCallback={sendToServer}/>
+      }
 
       {/* Overlay */}
       {initialising ? (
@@ -555,7 +631,7 @@ const styles = StyleSheet.create({
     marginTop: statusBarHeight,
     backgroundColor: COLOR.black,
   },
-  callBtn: {
+  roomId: {
     top: 0,
     padding: 2,
     alignSelf: 'center',

@@ -6,8 +6,8 @@ import { useNavigation } from '@react-navigation/native'
 import COLOR from '../../theme'
 import { VISUAL_IMG } from '../../assets'
 import Button from '../../components/Button'
-import { generateRoomId } from '../../utils'
-import { selectUserId, setUserId } from '../../redux/slices/AuthenticationSlice'
+import { generateRoomId, mmkv } from '../../utils'
+import { setUserId } from '../../redux/slices/AuthenticationSlice'
 
 const HomeScreen = () => {
   const dispatch = useDispatch()
@@ -25,9 +25,11 @@ const HomeScreen = () => {
 
   // gen userId
   useEffect(() => {
+    const savedName = mmkv.getString('USER_NAME')
+
     dispatch(
       setUserId({
-        userId: generateRoomId()
+        userId: savedName ? savedName : generateRoomId()
       })
     )
   }, [])
@@ -56,20 +58,6 @@ const HomeScreen = () => {
           title={'Join a meeting'}
           onPress={() => navigateMeetingStack('join')}
         />
-
-        {/*
-          create roomId -> navigate ready screen
-          -> join -> send 'create' message to server -> server let socket join 'roomId'
-          -> exit -> end
-
-          another user enter code -> check roomId on server
-          -> exist -> let user in ready screen
-          -> join -> send 'join' message to server -> server let socket join 'roomId'
-
-          creator in room -> waiting for new one join room
-          -> new one send offer -> everyone in room listen and create new peerConnection
-          -> exchange offer/answer
-        */}
       </View>
     </View>
   )

@@ -45,7 +45,9 @@ const TwoPeerLayout = () => {
           }
 
           <View style={styles.frameInfoRow}>
-            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>{item.id}</Text>
+            <Text numberOfLines={1} style={[styles.blackText, styles.nameText]}>
+              {item.id == userId ? 'YOU' : item.id}
+            </Text>
 
             {/* <Ionicons name="mic-outline" size={20} color={'black'}/> */}
           </View>
@@ -92,7 +94,7 @@ const TwoPeerLayout = () => {
           {
             item.remoteStream ?
             <RTCView
-              zOrder={2}
+              zOrder={1}
               mirror={false}
               objectFit={'cover'}
               streamURL={item.remoteStream.toURL()}

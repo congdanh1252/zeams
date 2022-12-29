@@ -13,6 +13,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 import COLOR from '../../../theme'
 import { VISUAL_IMG } from '../../../assets'
+import { handleError } from '../../../utils'
 import BackButton from '../../../components/BackButton'
 
 const ERROR_TEXT = {
@@ -52,6 +53,9 @@ export const EnterCode = ({route, navigation}) => {
         if (!exist) {
           setErrorText(ERROR_TEXT.WRONG_CODE)
         }
+      })
+      .catch(err => {
+        handleError()
       })
     } else {
       setErrorText(ERROR_TEXT.BLANK_CODE)
