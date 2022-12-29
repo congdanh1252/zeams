@@ -22,10 +22,22 @@ import { selectLocalStream, updateChatMessages, updateLocalStream, updateOtherPe
 const servers = {
   iceServers: [
     {
-      urls: [
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-      ],
+      urls: "stun:relay.metered.ca:80",
+    },
+    {
+      urls: "turn:relay.metered.ca:80",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
+    },
+    {
+      urls: "turn:relay.metered.ca:443",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
+    },
+    {
+      urls: "turn:relay.metered.ca:443?transport=tcp",
+      username: "b7c8e882b6a18fac9c355430",
+      credential: "gxKFYWnICH7BX7cM",
     },
   ],
   // iceServers: [
